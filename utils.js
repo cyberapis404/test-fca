@@ -80,7 +80,7 @@ function get(url, jar, qs, options, ctx) {
         gzip: true
     };
 
-    return request(op).then(function(res) {
+    return request(op).then(function (res) {
         return res;
     });
 }
@@ -95,7 +95,7 @@ function post(url, jar, form, options, ctx, customHeader) {
         jar: jar,
         gzip: true
     };
-    return request(op).then(function(res) {
+    return request(op).then(function (res) {
         return res;
     });
 }
@@ -127,7 +127,7 @@ function postFormData(url, jar, form, qs, options, ctx) {
         gzip: true
     };
 
-    return request(op).then(function(res) {
+    return request(op).then(function (res) {
         return res;
     });
 }
@@ -217,7 +217,7 @@ var j = {
     Y: "%2c%22pt%22%3a0%2c%22vis%22%3a1%2c%22bls%22%3a0%2c%22blc%22%3a0%2c%22snd%22%3a1%2c%22ct%22%3a",
     Z: "%2c%22sb%22%3a1%2c%22t%22%3a%5b%5d%2c%22f%22%3anull%2c%22uct%22%3a0%2c%22s%22%3a0%2c%22blo%22%3a0%7d%2c%22bl%22%3a%7b%22ac%22%3a"
 };
-(function() {
+(function () {
     var l = [];
     for (var m in j) {
         i[j[m]] = m;
@@ -233,11 +233,11 @@ var j = {
 
 function presenceEncode(str) {
     return encodeURIComponent(str)
-        .replace(/([_A-Z])|%../g, function(m, n) {
+        .replace(/([_A-Z])|%../g, function (m, n) {
             return n ? "%" + n.charCodeAt(0).toString(16) : m;
         })
         .toLowerCase()
-        .replace(h, function(m) {
+        .replace(h, function (m) {
             return i[m];
         });
 }
@@ -249,7 +249,7 @@ function presenceEncode(str) {
 
 function presenceDecode(str) {
     return decodeURIComponent(
-        str.replace(/[_A-Z]/g, function(/** @type {string | number} */m) {
+        str.replace(/[_A-Z]/g, function (/** @type {string | number} */m) {
             return j[m];
         })
     );
@@ -307,7 +307,7 @@ function getGUID() {
     var sectionLength = Date.now();
     /** @type {string} */
 
-    var id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    var id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
         /** @type {number} */
 
         var r = Math.floor((sectionLength + Math.random() * 16) % 16);
@@ -661,7 +661,7 @@ function _formatAttachment(attachment1, attachment2) {
                 playableUrl: blob.story_attachment.media == null ? null : blob.story_attachment.media.playable_url,
 
                 subattachments: blob.story_attachment.subattachments,
-                properties: blob.story_attachment.properties.reduce(function(/** @type {{ [x: string]: any; }} */obj, /** @type {{ key: string | number; value: { text: any; }; }} */cur) {
+                properties: blob.story_attachment.properties.reduce(function (/** @type {{ [x: string]: any; }} */obj, /** @type {{ key: string | number; value: { text: any; }; }} */cur) {
                     obj[cur.key] = cur.value.text;
                     return obj;
                 }, {}),
@@ -707,7 +707,7 @@ function _formatAttachment(attachment1, attachment2) {
 function formatAttachment(attachments, attachmentIds, attachmentMap, shareMap) {
     attachmentMap = shareMap || attachmentMap;
     return attachments ?
-        attachments.map(function(/** @type {any} */val, /** @type {string | number} */i) {
+        attachments.map(function (/** @type {any} */val, /** @type {string | number} */i) {
             if (!attachmentMap ||
                 !attachmentIds ||
                 !attachmentMap[attachmentIds[i]]
@@ -723,18 +723,15 @@ function formatAttachment(attachments, attachmentIds, attachmentMap, shareMap) {
  */
 
 function formatDeltaMessage(m) {
-    var md = m.messageMetadata;
-    var mdata =
-        m.data === undefined ? [] :
-        m.data.prng === undefined ? [] :
-        JSON.parse(m.data.prng);
-    var m_id = mdata.map((/** @type {{ i: any; }} */u) => u.i);
-    var m_offset = mdata.map((/** @type {{ o: any; }} */u) => u.o);
-    var m_length = mdata.map((/** @type {{ l: any; }} */u) => u.l);
+    var md = m.delta.messageMetadata;
+    var mdata = m.delta.data === undefined ? [] : m.delta.data.prng === undefined ? [] : JSON.parse(m.delta.data.prng);
+    var m_id = mdata.map(u => u.i);
+    var m_offset = mdata.map(u => u.o);
+    var m_length = mdata.map(u => u.l);
     var mentions = {};
-    var body = m.body || "";
+    var body = m.delta.body || "";
     var args = body == "" ? [] : body.trim().split(/\s+/);
-    for (var i = 0; i < m_id.length; i++) mentions[m_id[i]] = m.body.substring(m_offset[i], m_offset[i] + m_length[i]);
+    for (var i = 0; i < m_id.length; i++) mentions[m_id[i]] = m.delta.body.substring(m_offset[i], m_offset[i] + m_length[i]);
 
     return {
         type: "message",
@@ -743,26 +740,18 @@ function formatDeltaMessage(m) {
         messageID: md.messageId,
         args: args,
         body: body,
-        attachments: (m.attachments || []).map((/** @type {any} */v) => _formatAttachment(v)),
+        attachments: (m.delta.attachments || []).map(v => _formatAttachment(v)),
         mentions: mentions,
         timestamp: md.timestamp,
         isGroup: !!md.threadKey.threadFbId,
-        participantIDs: m.participants || []
+        participantIDs: m.delta.participants || (md.cid ? md.cid.canonicalParticipantFbids : []) || []
     };
 }
-
-/**
- * @param {string} id
- */
 
 function formatID(id) {
     if (id != undefined && id != null) return id.replace(/(fb)?id[:.]/, "");
     else return id;
 }
-
-/**
- * @param {{ message: any; type: string; realtime_viewer_fbid: { toString: () => any; }; }} m
- */
 
 function formatMessage(m) {
     var originalMessage = m.message ? m.message : m;
@@ -771,28 +760,24 @@ function formatMessage(m) {
         senderName: originalMessage.sender_name,
         senderID: formatID(originalMessage.sender_fbid.toString()),
         participantNames: originalMessage.group_thread_info ? originalMessage.group_thread_info.participant_names : [originalMessage.sender_name.split(" ")[0]],
-        participantIDs: originalMessage.group_thread_info ?
-            originalMessage.group_thread_info.participant_ids.map(function(/** @type {{ toString: () => any; }} */v) {
+        participantIDs: originalMessage.group_thread_info
+            ? originalMessage.group_thread_info.participant_ids.map(function (v) {
                 return formatID(v.toString());
-            }) : [formatID(originalMessage.sender_fbid)],
+            })
+            : [formatID(originalMessage.sender_fbid)],
         body: originalMessage.body || "",
         threadID: formatID((originalMessage.thread_fbid || originalMessage.other_user_fbid).toString()),
         threadName: originalMessage.group_thread_info ? originalMessage.group_thread_info.name : originalMessage.sender_name,
         location: originalMessage.coordinates ? originalMessage.coordinates : null,
         messageID: originalMessage.mid ? originalMessage.mid.toString() : originalMessage.message_id,
-        attachments: formatAttachment(
-            originalMessage.attachments,
-            originalMessage.attachmentIds,
-            originalMessage.attachment_map,
-            originalMessage.share_map
-        ),
+        attachments: formatAttachment(originalMessage.attachments, originalMessage.attachmentIds, originalMessage.attachment_map, originalMessage.share_map),
         timestamp: originalMessage.timestamp,
         timestampAbsolute: originalMessage.timestamp_absolute,
         timestampRelative: originalMessage.timestamp_relative,
         timestampDatetime: originalMessage.timestamp_datetime,
         tags: originalMessage.tags,
         reactions: originalMessage.reactions ? originalMessage.reactions : [],
-        isUnread: originalMessage.is_unread 
+        isUnread: originalMessage.is_unread
     };
 
     if (m.type === "pages_messaging") obj.pageID = m.realtime_viewer_fbid.toString();
@@ -801,10 +786,6 @@ function formatMessage(m) {
     return obj;
 }
 
-/**
- * @param {{ message: any; }} m
- */
-
 function formatEvent(m) {
     var originalMessage = m.message ? m.message : m;
     var logMessageType = originalMessage.log_message_type;
@@ -812,7 +793,8 @@ function formatEvent(m) {
     if (logMessageType === "log:generic-admin-text") {
         logMessageData = originalMessage.log_message_data.untypedData;
         logMessageType = getAdminTextMessageType(originalMessage.log_message_data.message_type);
-    } else logMessageData = originalMessage.log_message_data;
+    }
+    else logMessageData = originalMessage.log_message_data;
 
     return Object.assign(formatMessage(originalMessage), {
         type: "event",
@@ -821,10 +803,6 @@ function formatEvent(m) {
         logMessageBody: originalMessage.log_message_body
     });
 }
-
-/**
- * @param {{ action_type: any; }} m
- */
 
 function formatHistoryMessage(m) {
     switch (m.action_type) {
@@ -871,1336 +849,1336 @@ function getAdminTextMessageType(m) {
  */
 
 function getGenderByPhysicalMethod(name) {
-  const female_name = [
-    "Phương Chi",
-    "An Bình",
-    "An Di",
-    "An Hạ",
-    "An Hằng",
-    "An Khê",
-    "An Nhiên",
-    "An Nhàn",
-    "Anh Chi",
-    "Anh Hương",
-    "Anh Mai",
-    "Anh Phương",
-    "Anh Thi",
-    "Anh Thy",
-    "Anh Thơ",
-    "Anh Thư",
-    "Anh Thảo",
-    "Anh Vũ",
-    "Anh Ðào",
-    "Ban Mai",
-    "Bình Minh",
-    "Bình Yên",
-    "Bích Chiêu",
-    "Bích Châu",
-    "Bích Duyên",
-    "Bích Hiền",
-    "Bích Huệ",
-    "Bích Hà",
-    "Bích Hạnh",
-    "Bích Hải",
-    "Bích Hảo",
-    "Bích Hậu",
-    "Bích Hằng",
-    "Bích Hồng",
-    "Bích Hợp",
-    "Bích Lam",
-    "Bích Liên",
-    "Bích Loan",
-    "Bích Nga",
-    "Bích Ngà",
-    "Bích Ngân",
-    "Bích Ngọc",
-    "Bích Như",
-    "Bích Phượng",
-    "Bích Quyên",
-    "Bích Quân",
-    "Bích San",
-    "Bích Thoa",
-    "Bích Thu",
-    "Bích Thảo",
-    "Bích Thủy",
-    "Bích Trang",
-    "Bích Trâm",
-    "Bích Ty",
-    "Bích Vân",
-    "Bích Ðiệp",
-    "Bích Ðào",
-    "Băng Băng",
-    "Băng Tâm",
-    "Bạch Cúc",
-    "Bạch Hoa",
-    "Bạch Kim",
-    "Bạch Liên",
-    "Bạch Loan",
-    "Bạch Mai",
-    "Bạch Quỳnh",
-    "Bạch Trà",
-    "Bạch Tuyết",
-    "Bạch Vân",
-    "Bạch Yến",
-    "Bảo Anh",
-    "Bảo Bình",
-    "Bảo Châu",
-    "Bảo Huệ",
-    "Bảo Hà",
-    "Bảo Hân",
-    "Bảo Lan",
-    "Bảo Lễ",
-    "Bảo Ngọc",
-    "Bảo Phương",
-    "Bảo Quyên",
-    "Bảo Quỳnh",
-    "Bảo Thoa",
-    "Bảo Thúy",
-    "Bảo Tiên",
-    "Bảo Trâm",
-    "Bảo Trân",
-    "Bảo Trúc",
-    "Bảo Uyên",
-    "Bảo Vy",
-    "Bảo Vân",
-    "Bội Linh",
-    "Cam Thảo",
-    "Chi Lan",
-    "Chi Mai",
-    "Chiêu Dương",
-    "Cát Cát",
-    "Cát Linh",
-    "Cát Ly",
-    "Cát Tiên",
-    "Cát Tường",
-    "Cẩm Hiền",
-    "Cẩm Hường",
-    "Cẩm Hạnh",
-    "Cẩm Linh",
-    "Cẩm Liên",
-    "Cẩm Ly",
-    "Cẩm Nhi",
-    "Cẩm Nhung",
-    "Cẩm Thúy",
-    "Cẩm Tú",
-    "Cẩm Vân",
-    "Cẩm Yến",
-    "Di Nhiên",
-    "Diên Vỹ",
-    "Diễm Chi",
-    "Diễm Châu",
-    "Diễm Hương",
-    "Diễm Hạnh",
-    "Diễm Hằng",
-    "Diễm Khuê",
-    "Diễm Kiều",
-    "Diễm Liên",
-    "Diễm Lộc",
-    "Diễm My",
-    "Diễm Phúc",
-    "Diễm Phương",
-    "Diễm Phước",
-    "Diễm Phượng",
-    "Diễm Quyên",
-    "Diễm Quỳnh",
-    "Diễm Thúy",
-    "Diễm Thư",
-    "Diễm Thảo",
-    "Diễm Trang",
-    "Diễm Trinh",
-    "Diễm Uyên",
-    "Diệp Anh",
-    "Diệp Vy",
-    "Diệu Anh",
-    "Diệu Hiền",
-    "Diệu Hoa",
-    "Diệu Huyền",
-    "Diệu Hương",
-    "Diệu Hạnh",
-    "Diệu Hằng",
-    "Diệu Hồng",
-    "Diệu Lan",
-    "Diệu Linh",
-    "Diệu Loan",
-    "Diệu Nga",
-    "Diệu Ngà",
-    "Diệu Ngọc",
-    "Diệu Nương",
-    "Diệu Thiện",
-    "Diệu Thúy",
-    "Diệu Vân",
-    "Diệu Ái",
-    "Duy Hạnh",
-    "Duy Mỹ",
-    "Duy Uyên",
-    "Duyên Hồng",
-    "Duyên My",
-    "Duyên Mỹ",
-    "Duyên Nương",
-    "Dã Lan",
-    "Dã Lâm",
-    "Dã Thảo",
-    "Dạ Hương",
-    "Dạ Lan",
-    "Dạ Nguyệt",
-    "Dạ Thi",
-    "Dạ Thảo",
-    "Dạ Yến",
-    "Gia Hân",
-    "Gia Khanh",
-    "Gia Linh",
-    "Gia Nhi",
-    "Gia Quỳnh",
-    "Giang Thanh",
-    "Giang Thiên",
-    "Giao Hưởng",
-    "Giao Kiều",
-    "Giao Linh",
-    "Giáng Ngọc",
-    "Giáng Tiên",
-    "Giáng Uyên",
-    "Hiếu Giang",
-    "Hiếu Hạnh",
-    "Hiếu Khanh",
-    "Hiếu Minh",
-    "Hiền Chung",
-    "Hiền Hòa",
-    "Hiền Mai",
-    "Hiền Nhi",
-    "Hiền Nương",
-    "Hiền Thục",
-    "Hiểu Lam",
-    "Hiểu Vân",
-    "Hoa Liên",
-    "Hoa Lý",
-    "Hoa Thiên",
-    "Hoa Tiên",
-    "Hoa Tranh",
-    "Hoài An",
-    "Hoài Giang",
-    "Hoài Hương",
-    "Hoài Phương",
-    "Hoài Thương",
-    "Hoài Trang",
-    "Hoài Vỹ",
-    "Hoàn Châu",
-    "Hoàn Vi",
-    "Hoàng Cúc",
-    "Hoàng Hà",
-    "Hoàng Kim",
-    "Hoàng Lan",
-    "Hoàng Mai",
-    "Hoàng Miên",
-    "Hoàng Nguyên",
-    "Hoàng Oanh",
-    "Hoàng Sa",
-    "Hoàng Thư",
-    "Hoàng Xuân",
-    "Hoàng Yến",
-    "Hoạ Mi",
-    "Huyền Anh",
-    "Huyền Diệu",
-    "Huyền Linh",
-    "Huyền Ngọc",
-    "Huyền Nhi",
-    "Huyền Thoại",
-    "Huyền Thư",
-    "Huyền Trang",
-    "Huyền Trâm",
-    "Huyền Trân",
-    "Huệ An",
-    "Huệ Hương",
-    "Huệ Hồng",
-    "Huệ Lan",
-    "Huệ Linh",
-    "Huệ Lâm",
-    "Huệ My",
-    "Huệ Phương",
-    "Huệ Thương",
-    "Huệ Ân",
-    "Huỳnh Anh",
-    "Hà Giang",
-    "Hà Liên",
-    "Hà Mi",
-    "Hà My",
-    "Hà Nhi",
-    "Hà Phương",
-    "Hà Thanh",
-    "Hà Tiên",
-    "Hàm Duyên",
-    "Hàm Nghi",
-    "Hàm Thơ",
-    "Hàm Ý",
-    "Hương Chi",
-    "Hương Giang",
-    "Hương Lan",
-    "Hương Liên",
-    "Hương Ly",
-    "Hương Lâm",
-    "Hương Mai",
-    "Hương Nhi",
-    "Hương Thu",
-    "Hương Thảo",
-    "Hương Thủy",
-    "Hương Tiên",
-    "Hương Trang",
-    "Hương Trà",
-    "Hương Xuân",
-    "Hướng Dương",
-    "Hạ Băng",
-    "Hạ Giang",
-    "Hạ Phương",
-    "Hạ Tiên",
-    "Hạ Uyên",
-    "Hạ Vy",
-    "Hạc Cúc",
-    "Hạnh Chi",
-    "Hạnh Dung",
-    "Hạnh Linh",
-    "Hạnh My",
-    "Hạnh Nga",
-    "Hạnh Nhơn",
-    "Hạnh Phương",
-    "Hạnh San",
-    "Hạnh Thảo",
-    "Hạnh Trang",
-    "Hạnh Vi",
-    "Hải Anh",
-    "Hải Châu",
-    "Hải Duyên",
-    "Hải Dương",
-    "Hải Miên",
-    "Hải My",
-    "Hải Mỹ",
-    "Hải Ngân",
-    "Hải Nhi",
-    "Hải Phương",
-    "Hải Phượng",
-    "Hải San",
-    "Hải Sinh",
-    "Hải Thanh",
-    "Hải Thảo",
-    "Hải Thụy",
-    "Hải Uyên",
-    "Hải Vy",
-    "Hải Vân",
-    "Hải Yến",
-    "Hải Ân",
-    "Hải Ðường",
-    "Hảo Nhi",
-    "Hằng Anh",
-    "Hằng Nga",
-    "Họa Mi",
-    "Hồ Diệp",
-    "Hồng Anh",
-    "Hồng Bạch Thảo",
-    "Hồng Châu",
-    "Hồng Diễm",
-    "Hồng Giang",
-    "Hồng Hoa",
-    "Hồng Hà",
-    "Hồng Hạnh",
-    "Hồng Khanh",
-    "Hồng Khuê",
-    "Hồng Khôi",
-    "Hồng Linh",
-    "Hồng Liên",
-    "Hồng Lâm",
-    "Hồng Mai",
-    "Hồng Nga",
-    "Hồng Ngân",
-    "Hồng Ngọc",
-    "Hồng Nhung",
-    "Hồng Như",
-    "Hồng Nhạn",
-    "Hồng Oanh",
-    "Hồng Phúc",
-    "Hồng Phương",
-    "Hồng Quế",
-    "Hồng Thu",
-    "Hồng Thúy",
-    "Hồng Thư",
-    "Hồng Thảo",
-    "Hồng Thắm",
-    "Hồng Thủy",
-    "Hồng Trúc",
-    "Hồng Tâm",
-    "Hồng Vân",
-    "Hồng Xuân",
-    "Hồng Ðiệp",
-    "Hồng Ðào",
-    "Hồng Đăng",
-    "Khiết Linh",
-    "Khiết Tâm",
-    "Khuê Trung",
-    "Khánh Chi",
-    "Khánh Giang",
-    "Khánh Giao",
-    "Khánh Huyền",
-    "Khánh Hà",
-    "Khánh Hằng",
-    "Khánh Linh",
-    "Khánh Ly",
-    "Khánh Mai",
-    "Khánh My",
-    "Khánh Ngân",
-    "Khánh Ngọc",
-    "Khánh Quyên",
-    "Khánh Quỳnh",
-    "Khánh Thủy",
-    "Khánh Trang",
-    "Khánh Vi",
-    "Khánh Vy",
-    "Khánh Vân",
-    "Khúc Lan",
-    "Khả Khanh",
-    "Khả Tú",
-    "Khả Ái",
-    "Khải Ca",
-    "Khải Hà",
-    "Khải Tâm",
-    "Kim Anh",
-    "Kim Chi",
-    "Kim Cương",
-    "Kim Dung",
-    "Kim Duyên",
-    "Kim Hoa",
-    "Kim Hương",
-    "Kim Khanh",
-    "Kim Khuyên",
-    "Kim Khánh",
-    "Kim Lan",
-    "Kim Liên",
-    "Kim Loan",
-    "Kim Ly",
-    "Kim Mai",
-    "Kim Ngân",
-    "Kim Ngọc",
-    "Kim Oanh",
-    "Kim Phượng",
-    "Kim Quyên",
-    "Kim Sa",
-    "Kim Thanh",
-    "Kim Thoa",
-    "Kim Thu",
-    "Kim Thy",
-    "Kim Thông",
-    "Kim Thư",
-    "Kim Thảo",
-    "Kim Thủy",
-    "Kim Trang",
-    "Kim Tuyến",
-    "Kim Tuyết",
-    "Kim Tuyền",
-    "Kim Xuyến",
-    "Kim Xuân",
-    "Kim Yến",
-    "Kim Ánh",
-    "Kim Đan",
-    "Kiết Hồng",
-    "Kiết Trinh",
-    "Kiều Anh",
-    "Kiều Diễm",
-    "Kiều Dung",
-    "Kiều Giang",
-    "Kiều Hoa",
-    "Kiều Hạnh",
-    "Kiều Khanh",
-    "Kiều Loan",
-    "Kiều Mai",
-    "Kiều Minh",
-    "Kiều Mỹ",
-    "Kiều Nga",
-    "Kiều Nguyệt",
-    "Kiều Nương",
-    "Kiều Thu",
-    "Kiều Trang",
-    "Kiều Trinh",
-    "Kỳ Anh",
-    "Kỳ Diệu",
-    "Kỳ Duyên",
-    "Lam Giang",
-    "Lam Hà",
-    "Lam Khê",
-    "Lam Ngọc",
-    "Lam Tuyền",
-    "Lan Anh",
-    "Lan Chi",
-    "Lan Hương",
-    "Lan Khuê",
-    "Lan Ngọc",
-    "Lan Nhi",
-    "Lan Phương",
-    "Lan Thương",
-    "Lan Trúc",
-    "Lan Vy",
-    "Linh Chi",
-    "Linh Châu",
-    "Linh Duyên",
-    "Linh Giang",
-    "Linh Hà",
-    "Linh Lan",
-    "Linh Nhi",
-    "Linh Phương",
-    "Linh Phượng",
-    "Linh San",
-    "Linh Trang",
-    "Linh Ðan",
-    "Liên Chi",
-    "Liên Hoa",
-    "Liên Hương",
-    "Liên Như",
-    "Liên Phương",
-    "Liên Trân",
-    "Liễu Oanh",
-    "Loan Châu",
-    "Ly Châu",
-    "Lâm Nhi",
-    "Lâm Oanh",
-    "Lâm Tuyền",
-    "Lâm Uyên",
-    "Lê Quỳnh",
-    "Lưu Ly",
-    "Lệ Băng",
-    "Lệ Chi",
-    "Lệ Giang",
-    "Lệ Hoa",
-    "Lệ Huyền",
-    "Lệ Khanh",
-    "Lệ Nga",
-    "Lệ Nhi",
-    "Lệ Quyên",
-    "Lệ Quân",
-    "Lệ Thanh",
-    "Lệ Thu",
-    "Lệ Thủy",
-    "Lộc Uyên",
-    "Lộc Uyển",
-    "Lục Bình",
-    "Mai Anh",
-    "Mai Chi",
-    "Mai Châu",
-    "Mai Hiền",
-    "Mai Hà",
-    "Mai Hương",
-    "Mai Hạ",
-    "Mai Khanh",
-    "Mai Khôi",
-    "Mai Lan",
-    "Mai Linh",
-    "Mai Liên",
-    "Mai Loan",
-    "Mai Ly",
-    "Mai Nhi",
-    "Mai Phương",
-    "Mai Quyên",
-    "Mai Thanh",
-    "Mai Thu",
-    "Mai Thy",
-    "Mai Thảo",
-    "Mai Trinh",
-    "Mai Tâm",
-    "Mai Vy",
-    "Minh An",
-    "Minh Châu",
-    "Minh Duyên",
-    "Minh Hiền",
-    "Minh Huyền",
-    "Minh Huệ",
-    "Minh Hà",
-    "Minh Hương",
-    "Minh Hạnh",
-    "Minh Hằng",
-    "Minh Hồng",
-    "Minh Khai",
-    "Minh Khuê",
-    "Minh Loan",
-    "Minh Minh",
-    "Minh Nguyệt",
-    "Minh Ngọc",
-    "Minh Nhi",
-    "Minh Như",
-    "Minh Phương",
-    "Minh Phượng",
-    "Minh Thu",
-    "Minh Thúy",
-    "Minh Thư",
-    "Minh Thương",
-    "Minh Thảo",
-    "Minh Thủy",
-    "Minh Trang",
-    "Minh Tuyết",
-    "Minh Tuệ",
-    "Minh Tâm",
-    "Minh Uyên",
-    "Minh Vy",
-    "Minh Xuân",
-    "Minh Yến",
-    "Minh Đan",
-    "Mậu Xuân",
-    "Mộc Miên",
-    "Mộng Hoa",
-    "Mộng Hương",
-    "Mộng Hằng",
-    "Mộng Lan",
-    "Mộng Liễu",
-    "Mộng Nguyệt",
-    "Mộng Nhi",
-    "Mộng Quỳnh",
-    "Mộng Thi",
-    "Mộng Thu",
-    "Mộng Tuyền",
-    "Mộng Vi",
-    "Mộng Vy",
-    "Mộng Vân",
-    "Mộng Ðiệp",
-    "Mỹ Anh",
-    "Mỹ Diễm",
-    "Mỹ Dung",
-    "Mỹ Duyên",
-    "Mỹ Hiệp",
-    "Mỹ Hoàn",
-    "Mỹ Huyền",
-    "Mỹ Huệ",
-    "Mỹ Hường",
-    "Mỹ Hạnh",
-    "Mỹ Khuyên",
-    "Mỹ Kiều",
-    "Mỹ Lan",
-    "Mỹ Loan",
-    "Mỹ Lệ",
-    "Mỹ Lợi",
-    "Mỹ Nga",
-    "Mỹ Ngọc",
-    "Mỹ Nhi",
-    "Mỹ Nhân",
-    "Mỹ Nương",
-    "Mỹ Phương",
-    "Mỹ Phượng",
-    "Mỹ Phụng",
-    "Mỹ Thuần",
-    "Mỹ Thuận",
-    "Mỹ Trang",
-    "Mỹ Trâm",
-    "Mỹ Tâm",
-    "Mỹ Uyên",
-    "Mỹ Vân",
-    "Mỹ Xuân",
-    "Mỹ Yến",
-    "Nghi Dung",
-    "Nghi Minh",
-    "Nghi Xuân",
-    "Nguyên Hồng",
-    "Nguyên Thảo",
-    "Nguyết Ánh",
-    "Nguyệt Anh",
-    "Nguyệt Cát",
-    "Nguyệt Cầm",
-    "Nguyệt Hà",
-    "Nguyệt Hồng",
-    "Nguyệt Lan",
-    "Nguyệt Minh",
-    "Nguyệt Nga",
-    "Nguyệt Quế",
-    "Nguyệt Uyển",
-    "Nguyệt Ánh",
-    "Ngân Anh",
-    "Ngân Hà",
-    "Ngân Thanh",
-    "Ngân Trúc",
-    "Ngọc Anh",
-    "Ngọc Bích",
-    "Ngọc Cầm",
-    "Ngọc Diệp",
-    "Ngọc Dung",
-    "Ngọc Hiền",
-    "Ngọc Hoa",
-    "Ngọc Hoan",
-    "Ngọc Hoàn",
-    "Ngọc Huyền",
-    "Ngọc Huệ",
-    "Ngọc Hà",
-    "Ngọc Hân",
-    "Ngọc Hạ",
-    "Ngọc Hạnh",
-    "Ngọc Hằng",
-    "Ngọc Khanh",
-    "Ngọc Khuê",
-    "Ngọc Khánh",
-    "Ngọc Lam",
-    "Ngọc Lan",
-    "Ngọc Linh",
-    "Ngọc Liên",
-    "Ngọc Loan",
-    "Ngọc Ly",
-    "Ngọc Lâm",
-    "Ngọc Lý",
-    "Ngọc Lệ",
-    "Ngọc Mai",
-    "Ngọc Nhi",
-    "Ngọc Nữ",
-    "Ngọc Oanh",
-    "Ngọc Phụng",
-    "Ngọc Quyên",
-    "Ngọc Quế",
-    "Ngọc Quỳnh",
-    "Ngọc San",
-    "Ngọc Sương",
-    "Ngọc Thi",
-    "Ngọc Thy",
-    "Ngọc Thơ",
-    "Ngọc Trinh",
-    "Ngọc Trâm",
-    "Ngọc Tuyết",
-    "Ngọc Tâm",
-    "Ngọc Tú",
-    "Ngọc Uyên",
-    "Ngọc Uyển",
-    "Ngọc Vy",
-    "Ngọc Vân",
-    "Ngọc Yến",
-    "Ngọc Ái",
-    "Ngọc Ánh",
-    "Ngọc Ðiệp",
-    "Ngọc Ðàn",
-    "Ngọc Ðào",
-    "Nhan Hồng",
-    "Nhã Hương",
-    "Nhã Hồng",
-    "Nhã Khanh",
-    "Nhã Lý",
-    "Nhã Mai",
-    "Nhã Sương",
-    "Nhã Thanh",
-    "Nhã Trang",
-    "Nhã Trúc",
-    "Nhã Uyên",
-    "Nhã Yến",
-    "Nhã Ý",
-    "Như Anh",
-    "Như Bảo",
-    "Như Hoa",
-    "Như Hảo",
-    "Như Hồng",
-    "Như Loan",
-    "Như Mai",
-    "Như Ngà",
-    "Như Ngọc",
-    "Như Phương",
-    "Như Quân",
-    "Như Quỳnh",
-    "Như Thảo",
-    "Như Trân",
-    "Như Tâm",
-    "Như Ý",
-    "Nhất Thương",
-    "Nhật Dạ",
-    "Nhật Hà",
-    "Nhật Hạ",
-    "Nhật Lan",
-    "Nhật Linh",
-    "Nhật Lệ",
-    "Nhật Mai",
-    "Nhật Phương",
-    "Nhật Ánh",
-    "Oanh Thơ",
-    "Oanh Vũ",
-    "Phi Khanh",
-    "Phi Nhung",
-    "Phi Nhạn",
-    "Phi Phi",
-    "Phi Phượng",
-    "Phong Lan",
-    "Phương An",
-    "Phương Anh",
-    "Phương Chi",
-    "Phương Châu",
-    "Phương Diễm",
-    "Phương Dung",
-    "Phương Giang",
-    "Phương Hiền",
-    "Phương Hoa",
-    "Phương Hạnh",
-    "Phương Lan",
-    "Phương Linh",
-    "Phương Liên",
-    "Phương Loan",
-    "Phương Mai",
-    "Phương Nghi",
-    "Phương Ngọc",
-    "Phương Nhi",
-    "Phương Nhung",
-    "Phương Phương",
-    "Phương Quyên",
-    "Phương Quân",
-    "Phương Quế",
-    "Phương Quỳnh",
-    "Phương Thanh",
-    "Phương Thi",
-    "Phương Thùy",
-    "Phương Thảo",
-    "Phương Thủy",
-    "Phương Trang",
-    "Phương Trinh",
-    "Phương Trà",
-    "Phương Trâm",
-    "Phương Tâm",
-    "Phương Uyên",
-    "Phương Yến",
-    "Phước Bình",
-    "Phước Huệ",
-    "Phượng Bích",
-    "Phượng Liên",
-    "Phượng Loan",
-    "Phượng Lệ",
-    "Phượng Nga",
-    "Phượng Nhi",
-    "Phượng Tiên",
-    "Phượng Uyên",
-    "Phượng Vy",
-    "Phượng Vũ",
-    "Phụng Yến",
-    "Quế Anh",
-    "Quế Chi",
-    "Quế Linh",
-    "Quế Lâm",
-    "Quế Phương",
-    "Quế Thu",
-    "Quỳnh Anh",
-    "Quỳnh Chi",
-    "Quỳnh Dao",
-    "Quỳnh Dung",
-    "Quỳnh Giang",
-    "Quỳnh Giao",
-    "Quỳnh Hoa",
-    "Quỳnh Hà",
-    "Quỳnh Hương",
-    "Quỳnh Lam",
-    "Quỳnh Liên",
-    "Quỳnh Lâm",
-    "Quỳnh Nga",
-    "Quỳnh Ngân",
-    "Quỳnh Nhi",
-    "Quỳnh Nhung",
-    "Quỳnh Như",
-    "Quỳnh Phương",
-    "Quỳnh Sa",
-    "Quỳnh Thanh",
-    "Quỳnh Thơ",
-    "Quỳnh Tiên",
-    "Quỳnh Trang",
-    "Quỳnh Trâm",
-    "Quỳnh Vân",
-    "Sao Băng",
-    "Sao Mai",
-    "Song Kê",
-    "Song Lam",
-    "Song Oanh",
-    "Song Thư",
-    "Sông Hà",
-    "Sông Hương",
-    "Sơn Ca",
-    "Sơn Tuyền",
-    "Sương Sương",
-    "Thanh Bình",
-    "Thanh Dân",
-    "Thanh Giang",
-    "Thanh Hiếu",
-    "Thanh Hiền",
-    "Thanh Hoa",
-    "Thanh Huyền",
-    "Thanh Hà",
-    "Thanh Hương",
-    "Thanh Hường",
-    "Thanh Hạnh",
-    "Thanh Hảo",
-    "Thanh Hằng",
-    "Thanh Hồng",
-    "Thanh Kiều",
-    "Thanh Lam",
-    "Thanh Lan",
-    "Thanh Loan",
-    "Thanh Lâm",
-    "Thanh Mai",
-    "Thanh Mẫn",
-    "Thanh Nga",
-    "Thanh Nguyên",
-    "Thanh Ngân",
-    "Thanh Ngọc",
-    "Thanh Nhung",
-    "Thanh Nhàn",
-    "Thanh Nhã",
-    "Thanh Phương",
-    "Thanh Thanh",
-    "Thanh Thiên",
-    "Thanh Thu",
-    "Thanh Thúy",
-    "Thanh Thư",
-    "Thanh Thảo",
-    "Thanh Thủy",
-    "Thanh Trang",
-    "Thanh Trúc",
-    "Thanh Tuyết",
-    "Thanh Tuyền",
-    "Thanh Tâm",
-    "Thanh Uyên",
-    "Thanh Vy",
-    "Thanh Vân",
-    "Thanh Xuân",
-    "Thanh Yến",
-    "Thanh Đan",
-    "Thi Cầm",
-    "Thi Ngôn",
-    "Thi Thi",
-    "Thi Xuân",
-    "Thi Yến",
-    "Thiên Di",
-    "Thiên Duyên",
-    "Thiên Giang",
-    "Thiên Hà",
-    "Thiên Hương",
-    "Thiên Khánh",
-    "Thiên Kim",
-    "Thiên Lam",
-    "Thiên Lan",
-    "Thiên Mai",
-    "Thiên Mỹ",
-    "Thiên Nga",
-    "Thiên Nương",
-    "Thiên Phương",
-    "Thiên Thanh",
-    "Thiên Thêu",
-    "Thiên Thư",
-    "Thiên Thảo",
-    "Thiên Trang",
-    "Thiên Tuyền",
-    "Thiếu Mai",
-    "Thiều Ly",
-    "Thiện Mỹ",
-    "Thiện Tiên",
-    "Thu Duyên",
-    "Thu Giang",
-    "Thu Hiền",
-    "Thu Hoài",
-    "Thu Huyền",
-    "Thu Huệ",
-    "Thu Hà",
-    "Thu Hậu",
-    "Thu Hằng",
-    "Thu Hồng",
-    "Thu Linh",
-    "Thu Liên",
-    "Thu Loan",
-    "Thu Mai",
-    "Thu Minh",
-    "Thu Nga",
-    "Thu Nguyệt",
-    "Thu Ngà",
-    "Thu Ngân",
-    "Thu Ngọc",
-    "Thu Nhiên",
-    "Thu Oanh",
-    "Thu Phong",
-    "Thu Phương",
-    "Thu Phượng",
-    "Thu Sương",
-    "Thu Thuận",
-    "Thu Thảo",
-    "Thu Thủy",
-    "Thu Trang",
-    "Thu Việt",
-    "Thu Vân",
-    "Thu Vọng",
-    "Thu Yến",
-    "Thuần Hậu",
-    "Thy Khanh",
-    "Thy Oanh",
-    "Thy Trúc",
-    "Thy Vân",
-    "Thái Chi",
-    "Thái Hà",
-    "Thái Hồng",
-    "Thái Lan",
-    "Thái Lâm",
-    "Thái Thanh",
-    "Thái Thảo",
-    "Thái Tâm",
-    "Thái Vân",
-    "Thùy Anh",
-    "Thùy Dung",
-    "Thùy Dương",
-    "Thùy Giang",
-    "Thùy Linh",
-    "Thùy Mi",
-    "Thùy My",
-    "Thùy Nhi",
-    "Thùy Như",
-    "Thùy Oanh",
-    "Thùy Uyên",
-    "Thùy Vân",
-    "Thúy Anh",
-    "Thúy Diễm",
-    "Thúy Hiền",
-    "Thúy Huyền",
-    "Thúy Hà",
-    "Thúy Hương",
-    "Thúy Hường",
-    "Thúy Hạnh",
-    "Thúy Hằng",
-    "Thúy Kiều",
-    "Thúy Liên",
-    "Thúy Liễu",
-    "Thúy Loan",
-    "Thúy Mai",
-    "Thúy Minh",
-    "Thúy My",
-    "Thúy Nga",
-    "Thúy Ngà",
-    "Thúy Ngân",
-    "Thúy Ngọc",
-    "Thúy Phượng",
-    "Thúy Quỳnh",
-    "Thúy Vi",
-    "Thúy Vy",
-    "Thúy Vân",
-    "Thơ Thơ",
-    "Thư Lâm",
-    "Thư Sương",
-    "Thương Huyền",
-    "Thương Nga",
-    "Thương Thương",
-    "Thường Xuân",
-    "Thạch Thảo",
-    "Thảo Hương",
-    "Thảo Hồng",
-    "Thảo Linh",
-    "Thảo Ly",
-    "Thảo Mai",
-    "Thảo My",
-    "Thảo Nghi",
-    "Thảo Nguyên",
-    "Thảo Nhi",
-    "Thảo Quyên",
-    "Thảo Tiên",
-    "Thảo Trang",
-    "Thảo Uyên",
-    "Thảo Vy",
-    "Thảo Vân",
-    "Thục Anh",
-    "Thục Khuê",
-    "Thục Nhi",
-    "Thục Oanh",
-    "Thục Quyên",
-    "Thục Trang",
-    "Thục Trinh",
-    "Thục Tâm",
-    "Thục Uyên",
-    "Thục Vân",
-    "Thục Ðoan",
-    "Thục Ðào",
-    "Thục Ðình",
-    "Thụy Du",
-    "Thụy Khanh",
-    "Thụy Linh",
-    "Thụy Lâm",
-    "Thụy Miên",
-    "Thụy Nương",
-    "Thụy Trinh",
-    "Thụy Trâm",
-    "Thụy Uyên",
-    "Thụy Vân",
-    "Thụy Ðào",
-    "Thủy Hằng",
-    "Thủy Hồng",
-    "Thủy Linh",
-    "Thủy Minh",
-    "Thủy Nguyệt",
-    "Thủy Quỳnh",
-    "Thủy Tiên",
-    "Thủy Trang",
-    "Thủy Tâm",
-    "Tinh Tú",
-    "Tiên Phương",
-    "Tiểu Mi",
-    "Tiểu My",
-    "Tiểu Quỳnh",
-    "Trang Anh",
-    "Trang Linh",
-    "Trang Nhã",
-    "Trang Tâm",
-    "Trang Ðài",
-    "Triều Nguyệt",
-    "Triều Thanh",
-    "Triệu Mẫn",
-    "Trung Anh",
-    "Trà Giang",
-    "Trà My",
-    "Trâm Anh",
-    "Trâm Oanh",
-    "Trân Châu",
-    "Trúc Chi",
-    "Trúc Lam",
-    "Trúc Lan",
-    "Trúc Linh",
-    "Trúc Liên",
-    "Trúc Loan",
-    "Trúc Ly",
-    "Trúc Lâm",
-    "Trúc Mai",
-    "Trúc Phương",
-    "Trúc Quân",
-    "Trúc Quỳnh",
-    "Trúc Vy",
-    "Trúc Vân",
-    "Trúc Ðào",
-    "Trúc Đào",
-    "Trầm Hương",
-    "Tuyết Anh",
-    "Tuyết Băng",
-    "Tuyết Chi",
-    "Tuyết Hoa",
-    "Tuyết Hân",
-    "Tuyết Hương",
-    "Tuyết Hồng",
-    "Tuyết Lan",
-    "Tuyết Loan",
-    "Tuyết Lâm",
-    "Tuyết Mai",
-    "Tuyết Nga",
-    "Tuyết Nhi",
-    "Tuyết Nhung",
-    "Tuyết Oanh",
-    "Tuyết Thanh",
-    "Tuyết Trinh",
-    "Tuyết Trầm",
-    "Tuyết Tâm",
-    "Tuyết Vy",
-    "Tuyết Vân",
-    "Tuyết Xuân",
-    "Tuyền Lâm",
-    "Tuệ Lâm",
-    "Tuệ Mẫn",
-    "Tuệ Nhi",
-    "Tâm Hiền",
-    "Tâm Hạnh",
-    "Tâm Hằng",
-    "Tâm Khanh",
-    "Tâm Linh",
-    "Tâm Nguyên",
-    "Tâm Nguyệt",
-    "Tâm Nhi",
-    "Tâm Như",
-    "Tâm Thanh",
-    "Tâm Trang",
-    "Tâm Ðoan",
-    "Tâm Đan",
-    "Tùng Linh",
-    "Tùng Lâm",
-    "Tùng Quân",
-    "Tùy Anh",
-    "Tùy Linh",
-    "Tú Anh",
-    "Tú Ly",
-    "Tú Nguyệt",
-    "Tú Quyên",
-    "Tú Quỳnh",
-    "Tú Sương",
-    "Tú Trinh",
-    "Tú Tâm",
-    "Tú Uyên",
-    "Túy Loan",
-    "Tường Chinh",
-    "Tường Vi",
-    "Tường Vy",
-    "Tường Vân",
-    "Tịnh Lâm",
-    "Tịnh Nhi",
-    "Tịnh Như",
-    "Tịnh Tâm",
-    "Tịnh Yên",
-    "Tố Loan",
-    "Tố Nga",
-    "Tố Nhi",
-    "Tố Quyên",
-    "Tố Tâm",
-    "Tố Uyên",
-    "Từ Dung",
-    "Từ Ân",
-    "Uyên Minh",
-    "Uyên My",
-    "Uyên Nhi",
-    "Uyên Phương",
-    "Uyên Thi",
-    "Uyên Thy",
-    "Uyên Thơ",
-    "Uyên Trâm",
-    "Uyên Vi",
-    "Uyển Khanh",
-    "Uyển My",
-    "Uyển Nghi",
-    "Uyển Nhi",
-    "Uyển Nhã",
-    "Uyển Như",
-    "Vi Quyên",
-    "Vinh Diệu",
-    "Việt Hà",
-    "Việt Hương",
-    "Việt Khuê",
-    "Việt Mi",
-    "Việt Nga",
-    "Việt Nhi",
-    "Việt Thi",
-    "Việt Trinh",
-    "Việt Tuyết",
-    "Việt Yến",
-    "Vy Lam",
-    "Vy Lan",
-    "Vàng Anh",
-    "Vành Khuyên",
-    "Vân Anh",
-    "Vân Chi",
-    "Vân Du",
-    "Vân Hà",
-    "Vân Hương",
-    "Vân Khanh",
-    "Vân Khánh",
-    "Vân Linh",
-    "Vân Ngọc",
-    "Vân Nhi",
-    "Vân Phi",
-    "Vân Phương",
-    "Vân Quyên",
-    "Vân Quỳnh",
-    "Vân Thanh",
-    "Vân Thúy",
-    "Vân Thường",
-    "Vân Tiên",
-    "Vân Trang",
-    "Vân Trinh",
-    "Vũ Hồng",
-    "Xuyến Chi",
-    "Xuân Bảo",
-    "Xuân Dung",
-    "Xuân Hiền",
-    "Xuân Hoa",
-    "Xuân Hân",
-    "Xuân Hương",
-    "Xuân Hạnh",
-    "Xuân Lan",
-    "Xuân Linh",
-    "Xuân Liễu",
-    "Xuân Loan",
-    "Xuân Lâm",
-    "Xuân Mai",
-    "Xuân Nghi",
-    "Xuân Ngọc",
-    "Xuân Nhi",
-    "Xuân Nhiên",
-    "Xuân Nương",
-    "Xuân Phương",
-    "Xuân Phượng",
-    "Xuân Thanh",
-    "Xuân Thu",
-    "Xuân Thảo",
-    "Xuân Thủy",
-    "Xuân Trang",
-    "Xuân Tâm",
-    "Xuân Uyên",
-    "Xuân Vân",
-    "Xuân Yến",
-    "Xuân xanh",
-    "Yên Bằng",
-    "Yên Mai",
-    "Yên Nhi",
-    "Yên Ðan",
-    "Yên Đan",
-    "Yến Anh",
-    "Yến Hồng",
-    "Yến Loan",
-    "Yến Mai",
-    "Yến My",
-    "Yến Nhi",
-    "Yến Oanh",
-    "Yến Phương",
-    "Yến Phượng",
-    "Yến Thanh",
-    "Yến Thảo",
-    "Yến Trang",
-    "Yến Trinh",
-    "Yến Trâm",
-    "Yến Ðan",
-    "Ái Hồng",
-    "Ái Khanh",
-    "Ái Linh",
-    "Ái Nhi",
-    "Ái Nhân",
-    "Ái Thi",
-    "Ái Thy",
-    "Ái Vân",
-    "Ánh Dương",
-    "Ánh Hoa",
-    "Ánh Hồng",
-    "Ánh Linh",
-    "Ánh Lệ",
-    "Ánh Mai",
-    "Ánh Nguyệt",
-    "Ánh Ngọc",
-    "Ánh Thơ",
-    "Ánh Trang",
-    "Ánh Tuyết",
-    "Ánh Xuân",
-    "Ðan Khanh",
-    "Ðan Quỳnh",
-    "Ðan Thu",
-    "Ðinh Hương",
-    "Ðoan Thanh",
-    "Ðoan Trang",
-    "Ðài Trang",
-    "Ðông Nghi",
-    "Ðông Nhi",
-    "Ðông Trà",
-    "Ðông Tuyền",
-    "Ðông Vy",
-    "Ðông Ðào",
-    "Ðồng Dao",
-    "Ý Bình",
-    "Ý Lan",
-    "Ý Nhi",
-    "Đan Linh",
-    "Đan Quỳnh",
-    "Đan Thanh",
-    "Đan Thu",
-    "Đan Thư",
-    "Đan Tâm",
-    "Đinh Hương",
-    "Đoan Thanh",
-    "Đoan Trang",
-    "Đài Trang",
-    "Đông Nghi",
-    "Đông Trà",
-    "Đông Tuyền",
-    "Đông Vy",
-    "Đơn Thuần",
-    "Đức Hạnh",
-    "Ấu Lăng"
-]
-    let OtherName = [".",",","/","%", "&","*","-","+"];
+    const female_name = [
+        "Phương Chi",
+        "An Bình",
+        "An Di",
+        "An Hạ",
+        "An Hằng",
+        "An Khê",
+        "An Nhiên",
+        "An Nhàn",
+        "Anh Chi",
+        "Anh Hương",
+        "Anh Mai",
+        "Anh Phương",
+        "Anh Thi",
+        "Anh Thy",
+        "Anh Thơ",
+        "Anh Thư",
+        "Anh Thảo",
+        "Anh Vũ",
+        "Anh Ðào",
+        "Ban Mai",
+        "Bình Minh",
+        "Bình Yên",
+        "Bích Chiêu",
+        "Bích Châu",
+        "Bích Duyên",
+        "Bích Hiền",
+        "Bích Huệ",
+        "Bích Hà",
+        "Bích Hạnh",
+        "Bích Hải",
+        "Bích Hảo",
+        "Bích Hậu",
+        "Bích Hằng",
+        "Bích Hồng",
+        "Bích Hợp",
+        "Bích Lam",
+        "Bích Liên",
+        "Bích Loan",
+        "Bích Nga",
+        "Bích Ngà",
+        "Bích Ngân",
+        "Bích Ngọc",
+        "Bích Như",
+        "Bích Phượng",
+        "Bích Quyên",
+        "Bích Quân",
+        "Bích San",
+        "Bích Thoa",
+        "Bích Thu",
+        "Bích Thảo",
+        "Bích Thủy",
+        "Bích Trang",
+        "Bích Trâm",
+        "Bích Ty",
+        "Bích Vân",
+        "Bích Ðiệp",
+        "Bích Ðào",
+        "Băng Băng",
+        "Băng Tâm",
+        "Bạch Cúc",
+        "Bạch Hoa",
+        "Bạch Kim",
+        "Bạch Liên",
+        "Bạch Loan",
+        "Bạch Mai",
+        "Bạch Quỳnh",
+        "Bạch Trà",
+        "Bạch Tuyết",
+        "Bạch Vân",
+        "Bạch Yến",
+        "Bảo Anh",
+        "Bảo Bình",
+        "Bảo Châu",
+        "Bảo Huệ",
+        "Bảo Hà",
+        "Bảo Hân",
+        "Bảo Lan",
+        "Bảo Lễ",
+        "Bảo Ngọc",
+        "Bảo Phương",
+        "Bảo Quyên",
+        "Bảo Quỳnh",
+        "Bảo Thoa",
+        "Bảo Thúy",
+        "Bảo Tiên",
+        "Bảo Trâm",
+        "Bảo Trân",
+        "Bảo Trúc",
+        "Bảo Uyên",
+        "Bảo Vy",
+        "Bảo Vân",
+        "Bội Linh",
+        "Cam Thảo",
+        "Chi Lan",
+        "Chi Mai",
+        "Chiêu Dương",
+        "Cát Cát",
+        "Cát Linh",
+        "Cát Ly",
+        "Cát Tiên",
+        "Cát Tường",
+        "Cẩm Hiền",
+        "Cẩm Hường",
+        "Cẩm Hạnh",
+        "Cẩm Linh",
+        "Cẩm Liên",
+        "Cẩm Ly",
+        "Cẩm Nhi",
+        "Cẩm Nhung",
+        "Cẩm Thúy",
+        "Cẩm Tú",
+        "Cẩm Vân",
+        "Cẩm Yến",
+        "Di Nhiên",
+        "Diên Vỹ",
+        "Diễm Chi",
+        "Diễm Châu",
+        "Diễm Hương",
+        "Diễm Hạnh",
+        "Diễm Hằng",
+        "Diễm Khuê",
+        "Diễm Kiều",
+        "Diễm Liên",
+        "Diễm Lộc",
+        "Diễm My",
+        "Diễm Phúc",
+        "Diễm Phương",
+        "Diễm Phước",
+        "Diễm Phượng",
+        "Diễm Quyên",
+        "Diễm Quỳnh",
+        "Diễm Thúy",
+        "Diễm Thư",
+        "Diễm Thảo",
+        "Diễm Trang",
+        "Diễm Trinh",
+        "Diễm Uyên",
+        "Diệp Anh",
+        "Diệp Vy",
+        "Diệu Anh",
+        "Diệu Hiền",
+        "Diệu Hoa",
+        "Diệu Huyền",
+        "Diệu Hương",
+        "Diệu Hạnh",
+        "Diệu Hằng",
+        "Diệu Hồng",
+        "Diệu Lan",
+        "Diệu Linh",
+        "Diệu Loan",
+        "Diệu Nga",
+        "Diệu Ngà",
+        "Diệu Ngọc",
+        "Diệu Nương",
+        "Diệu Thiện",
+        "Diệu Thúy",
+        "Diệu Vân",
+        "Diệu Ái",
+        "Duy Hạnh",
+        "Duy Mỹ",
+        "Duy Uyên",
+        "Duyên Hồng",
+        "Duyên My",
+        "Duyên Mỹ",
+        "Duyên Nương",
+        "Dã Lan",
+        "Dã Lâm",
+        "Dã Thảo",
+        "Dạ Hương",
+        "Dạ Lan",
+        "Dạ Nguyệt",
+        "Dạ Thi",
+        "Dạ Thảo",
+        "Dạ Yến",
+        "Gia Hân",
+        "Gia Khanh",
+        "Gia Linh",
+        "Gia Nhi",
+        "Gia Quỳnh",
+        "Giang Thanh",
+        "Giang Thiên",
+        "Giao Hưởng",
+        "Giao Kiều",
+        "Giao Linh",
+        "Giáng Ngọc",
+        "Giáng Tiên",
+        "Giáng Uyên",
+        "Hiếu Giang",
+        "Hiếu Hạnh",
+        "Hiếu Khanh",
+        "Hiếu Minh",
+        "Hiền Chung",
+        "Hiền Hòa",
+        "Hiền Mai",
+        "Hiền Nhi",
+        "Hiền Nương",
+        "Hiền Thục",
+        "Hiểu Lam",
+        "Hiểu Vân",
+        "Hoa Liên",
+        "Hoa Lý",
+        "Hoa Thiên",
+        "Hoa Tiên",
+        "Hoa Tranh",
+        "Hoài An",
+        "Hoài Giang",
+        "Hoài Hương",
+        "Hoài Phương",
+        "Hoài Thương",
+        "Hoài Trang",
+        "Hoài Vỹ",
+        "Hoàn Châu",
+        "Hoàn Vi",
+        "Hoàng Cúc",
+        "Hoàng Hà",
+        "Hoàng Kim",
+        "Hoàng Lan",
+        "Hoàng Mai",
+        "Hoàng Miên",
+        "Hoàng Nguyên",
+        "Hoàng Oanh",
+        "Hoàng Sa",
+        "Hoàng Thư",
+        "Hoàng Xuân",
+        "Hoàng Yến",
+        "Hoạ Mi",
+        "Huyền Anh",
+        "Huyền Diệu",
+        "Huyền Linh",
+        "Huyền Ngọc",
+        "Huyền Nhi",
+        "Huyền Thoại",
+        "Huyền Thư",
+        "Huyền Trang",
+        "Huyền Trâm",
+        "Huyền Trân",
+        "Huệ An",
+        "Huệ Hương",
+        "Huệ Hồng",
+        "Huệ Lan",
+        "Huệ Linh",
+        "Huệ Lâm",
+        "Huệ My",
+        "Huệ Phương",
+        "Huệ Thương",
+        "Huệ Ân",
+        "Huỳnh Anh",
+        "Hà Giang",
+        "Hà Liên",
+        "Hà Mi",
+        "Hà My",
+        "Hà Nhi",
+        "Hà Phương",
+        "Hà Thanh",
+        "Hà Tiên",
+        "Hàm Duyên",
+        "Hàm Nghi",
+        "Hàm Thơ",
+        "Hàm Ý",
+        "Hương Chi",
+        "Hương Giang",
+        "Hương Lan",
+        "Hương Liên",
+        "Hương Ly",
+        "Hương Lâm",
+        "Hương Mai",
+        "Hương Nhi",
+        "Hương Thu",
+        "Hương Thảo",
+        "Hương Thủy",
+        "Hương Tiên",
+        "Hương Trang",
+        "Hương Trà",
+        "Hương Xuân",
+        "Hướng Dương",
+        "Hạ Băng",
+        "Hạ Giang",
+        "Hạ Phương",
+        "Hạ Tiên",
+        "Hạ Uyên",
+        "Hạ Vy",
+        "Hạc Cúc",
+        "Hạnh Chi",
+        "Hạnh Dung",
+        "Hạnh Linh",
+        "Hạnh My",
+        "Hạnh Nga",
+        "Hạnh Nhơn",
+        "Hạnh Phương",
+        "Hạnh San",
+        "Hạnh Thảo",
+        "Hạnh Trang",
+        "Hạnh Vi",
+        "Hải Anh",
+        "Hải Châu",
+        "Hải Duyên",
+        "Hải Dương",
+        "Hải Miên",
+        "Hải My",
+        "Hải Mỹ",
+        "Hải Ngân",
+        "Hải Nhi",
+        "Hải Phương",
+        "Hải Phượng",
+        "Hải San",
+        "Hải Sinh",
+        "Hải Thanh",
+        "Hải Thảo",
+        "Hải Thụy",
+        "Hải Uyên",
+        "Hải Vy",
+        "Hải Vân",
+        "Hải Yến",
+        "Hải Ân",
+        "Hải Ðường",
+        "Hảo Nhi",
+        "Hằng Anh",
+        "Hằng Nga",
+        "Họa Mi",
+        "Hồ Diệp",
+        "Hồng Anh",
+        "Hồng Bạch Thảo",
+        "Hồng Châu",
+        "Hồng Diễm",
+        "Hồng Giang",
+        "Hồng Hoa",
+        "Hồng Hà",
+        "Hồng Hạnh",
+        "Hồng Khanh",
+        "Hồng Khuê",
+        "Hồng Khôi",
+        "Hồng Linh",
+        "Hồng Liên",
+        "Hồng Lâm",
+        "Hồng Mai",
+        "Hồng Nga",
+        "Hồng Ngân",
+        "Hồng Ngọc",
+        "Hồng Nhung",
+        "Hồng Như",
+        "Hồng Nhạn",
+        "Hồng Oanh",
+        "Hồng Phúc",
+        "Hồng Phương",
+        "Hồng Quế",
+        "Hồng Thu",
+        "Hồng Thúy",
+        "Hồng Thư",
+        "Hồng Thảo",
+        "Hồng Thắm",
+        "Hồng Thủy",
+        "Hồng Trúc",
+        "Hồng Tâm",
+        "Hồng Vân",
+        "Hồng Xuân",
+        "Hồng Ðiệp",
+        "Hồng Ðào",
+        "Hồng Đăng",
+        "Khiết Linh",
+        "Khiết Tâm",
+        "Khuê Trung",
+        "Khánh Chi",
+        "Khánh Giang",
+        "Khánh Giao",
+        "Khánh Huyền",
+        "Khánh Hà",
+        "Khánh Hằng",
+        "Khánh Linh",
+        "Khánh Ly",
+        "Khánh Mai",
+        "Khánh My",
+        "Khánh Ngân",
+        "Khánh Ngọc",
+        "Khánh Quyên",
+        "Khánh Quỳnh",
+        "Khánh Thủy",
+        "Khánh Trang",
+        "Khánh Vi",
+        "Khánh Vy",
+        "Khánh Vân",
+        "Khúc Lan",
+        "Khả Khanh",
+        "Khả Tú",
+        "Khả Ái",
+        "Khải Ca",
+        "Khải Hà",
+        "Khải Tâm",
+        "Kim Anh",
+        "Kim Chi",
+        "Kim Cương",
+        "Kim Dung",
+        "Kim Duyên",
+        "Kim Hoa",
+        "Kim Hương",
+        "Kim Khanh",
+        "Kim Khuyên",
+        "Kim Khánh",
+        "Kim Lan",
+        "Kim Liên",
+        "Kim Loan",
+        "Kim Ly",
+        "Kim Mai",
+        "Kim Ngân",
+        "Kim Ngọc",
+        "Kim Oanh",
+        "Kim Phượng",
+        "Kim Quyên",
+        "Kim Sa",
+        "Kim Thanh",
+        "Kim Thoa",
+        "Kim Thu",
+        "Kim Thy",
+        "Kim Thông",
+        "Kim Thư",
+        "Kim Thảo",
+        "Kim Thủy",
+        "Kim Trang",
+        "Kim Tuyến",
+        "Kim Tuyết",
+        "Kim Tuyền",
+        "Kim Xuyến",
+        "Kim Xuân",
+        "Kim Yến",
+        "Kim Ánh",
+        "Kim Đan",
+        "Kiết Hồng",
+        "Kiết Trinh",
+        "Kiều Anh",
+        "Kiều Diễm",
+        "Kiều Dung",
+        "Kiều Giang",
+        "Kiều Hoa",
+        "Kiều Hạnh",
+        "Kiều Khanh",
+        "Kiều Loan",
+        "Kiều Mai",
+        "Kiều Minh",
+        "Kiều Mỹ",
+        "Kiều Nga",
+        "Kiều Nguyệt",
+        "Kiều Nương",
+        "Kiều Thu",
+        "Kiều Trang",
+        "Kiều Trinh",
+        "Kỳ Anh",
+        "Kỳ Diệu",
+        "Kỳ Duyên",
+        "Lam Giang",
+        "Lam Hà",
+        "Lam Khê",
+        "Lam Ngọc",
+        "Lam Tuyền",
+        "Lan Anh",
+        "Lan Chi",
+        "Lan Hương",
+        "Lan Khuê",
+        "Lan Ngọc",
+        "Lan Nhi",
+        "Lan Phương",
+        "Lan Thương",
+        "Lan Trúc",
+        "Lan Vy",
+        "Linh Chi",
+        "Linh Châu",
+        "Linh Duyên",
+        "Linh Giang",
+        "Linh Hà",
+        "Linh Lan",
+        "Linh Nhi",
+        "Linh Phương",
+        "Linh Phượng",
+        "Linh San",
+        "Linh Trang",
+        "Linh Ðan",
+        "Liên Chi",
+        "Liên Hoa",
+        "Liên Hương",
+        "Liên Như",
+        "Liên Phương",
+        "Liên Trân",
+        "Liễu Oanh",
+        "Loan Châu",
+        "Ly Châu",
+        "Lâm Nhi",
+        "Lâm Oanh",
+        "Lâm Tuyền",
+        "Lâm Uyên",
+        "Lê Quỳnh",
+        "Lưu Ly",
+        "Lệ Băng",
+        "Lệ Chi",
+        "Lệ Giang",
+        "Lệ Hoa",
+        "Lệ Huyền",
+        "Lệ Khanh",
+        "Lệ Nga",
+        "Lệ Nhi",
+        "Lệ Quyên",
+        "Lệ Quân",
+        "Lệ Thanh",
+        "Lệ Thu",
+        "Lệ Thủy",
+        "Lộc Uyên",
+        "Lộc Uyển",
+        "Lục Bình",
+        "Mai Anh",
+        "Mai Chi",
+        "Mai Châu",
+        "Mai Hiền",
+        "Mai Hà",
+        "Mai Hương",
+        "Mai Hạ",
+        "Mai Khanh",
+        "Mai Khôi",
+        "Mai Lan",
+        "Mai Linh",
+        "Mai Liên",
+        "Mai Loan",
+        "Mai Ly",
+        "Mai Nhi",
+        "Mai Phương",
+        "Mai Quyên",
+        "Mai Thanh",
+        "Mai Thu",
+        "Mai Thy",
+        "Mai Thảo",
+        "Mai Trinh",
+        "Mai Tâm",
+        "Mai Vy",
+        "Minh An",
+        "Minh Châu",
+        "Minh Duyên",
+        "Minh Hiền",
+        "Minh Huyền",
+        "Minh Huệ",
+        "Minh Hà",
+        "Minh Hương",
+        "Minh Hạnh",
+        "Minh Hằng",
+        "Minh Hồng",
+        "Minh Khai",
+        "Minh Khuê",
+        "Minh Loan",
+        "Minh Minh",
+        "Minh Nguyệt",
+        "Minh Ngọc",
+        "Minh Nhi",
+        "Minh Như",
+        "Minh Phương",
+        "Minh Phượng",
+        "Minh Thu",
+        "Minh Thúy",
+        "Minh Thư",
+        "Minh Thương",
+        "Minh Thảo",
+        "Minh Thủy",
+        "Minh Trang",
+        "Minh Tuyết",
+        "Minh Tuệ",
+        "Minh Tâm",
+        "Minh Uyên",
+        "Minh Vy",
+        "Minh Xuân",
+        "Minh Yến",
+        "Minh Đan",
+        "Mậu Xuân",
+        "Mộc Miên",
+        "Mộng Hoa",
+        "Mộng Hương",
+        "Mộng Hằng",
+        "Mộng Lan",
+        "Mộng Liễu",
+        "Mộng Nguyệt",
+        "Mộng Nhi",
+        "Mộng Quỳnh",
+        "Mộng Thi",
+        "Mộng Thu",
+        "Mộng Tuyền",
+        "Mộng Vi",
+        "Mộng Vy",
+        "Mộng Vân",
+        "Mộng Ðiệp",
+        "Mỹ Anh",
+        "Mỹ Diễm",
+        "Mỹ Dung",
+        "Mỹ Duyên",
+        "Mỹ Hiệp",
+        "Mỹ Hoàn",
+        "Mỹ Huyền",
+        "Mỹ Huệ",
+        "Mỹ Hường",
+        "Mỹ Hạnh",
+        "Mỹ Khuyên",
+        "Mỹ Kiều",
+        "Mỹ Lan",
+        "Mỹ Loan",
+        "Mỹ Lệ",
+        "Mỹ Lợi",
+        "Mỹ Nga",
+        "Mỹ Ngọc",
+        "Mỹ Nhi",
+        "Mỹ Nhân",
+        "Mỹ Nương",
+        "Mỹ Phương",
+        "Mỹ Phượng",
+        "Mỹ Phụng",
+        "Mỹ Thuần",
+        "Mỹ Thuận",
+        "Mỹ Trang",
+        "Mỹ Trâm",
+        "Mỹ Tâm",
+        "Mỹ Uyên",
+        "Mỹ Vân",
+        "Mỹ Xuân",
+        "Mỹ Yến",
+        "Nghi Dung",
+        "Nghi Minh",
+        "Nghi Xuân",
+        "Nguyên Hồng",
+        "Nguyên Thảo",
+        "Nguyết Ánh",
+        "Nguyệt Anh",
+        "Nguyệt Cát",
+        "Nguyệt Cầm",
+        "Nguyệt Hà",
+        "Nguyệt Hồng",
+        "Nguyệt Lan",
+        "Nguyệt Minh",
+        "Nguyệt Nga",
+        "Nguyệt Quế",
+        "Nguyệt Uyển",
+        "Nguyệt Ánh",
+        "Ngân Anh",
+        "Ngân Hà",
+        "Ngân Thanh",
+        "Ngân Trúc",
+        "Ngọc Anh",
+        "Ngọc Bích",
+        "Ngọc Cầm",
+        "Ngọc Diệp",
+        "Ngọc Dung",
+        "Ngọc Hiền",
+        "Ngọc Hoa",
+        "Ngọc Hoan",
+        "Ngọc Hoàn",
+        "Ngọc Huyền",
+        "Ngọc Huệ",
+        "Ngọc Hà",
+        "Ngọc Hân",
+        "Ngọc Hạ",
+        "Ngọc Hạnh",
+        "Ngọc Hằng",
+        "Ngọc Khanh",
+        "Ngọc Khuê",
+        "Ngọc Khánh",
+        "Ngọc Lam",
+        "Ngọc Lan",
+        "Ngọc Linh",
+        "Ngọc Liên",
+        "Ngọc Loan",
+        "Ngọc Ly",
+        "Ngọc Lâm",
+        "Ngọc Lý",
+        "Ngọc Lệ",
+        "Ngọc Mai",
+        "Ngọc Nhi",
+        "Ngọc Nữ",
+        "Ngọc Oanh",
+        "Ngọc Phụng",
+        "Ngọc Quyên",
+        "Ngọc Quế",
+        "Ngọc Quỳnh",
+        "Ngọc San",
+        "Ngọc Sương",
+        "Ngọc Thi",
+        "Ngọc Thy",
+        "Ngọc Thơ",
+        "Ngọc Trinh",
+        "Ngọc Trâm",
+        "Ngọc Tuyết",
+        "Ngọc Tâm",
+        "Ngọc Tú",
+        "Ngọc Uyên",
+        "Ngọc Uyển",
+        "Ngọc Vy",
+        "Ngọc Vân",
+        "Ngọc Yến",
+        "Ngọc Ái",
+        "Ngọc Ánh",
+        "Ngọc Ðiệp",
+        "Ngọc Ðàn",
+        "Ngọc Ðào",
+        "Nhan Hồng",
+        "Nhã Hương",
+        "Nhã Hồng",
+        "Nhã Khanh",
+        "Nhã Lý",
+        "Nhã Mai",
+        "Nhã Sương",
+        "Nhã Thanh",
+        "Nhã Trang",
+        "Nhã Trúc",
+        "Nhã Uyên",
+        "Nhã Yến",
+        "Nhã Ý",
+        "Như Anh",
+        "Như Bảo",
+        "Như Hoa",
+        "Như Hảo",
+        "Như Hồng",
+        "Như Loan",
+        "Như Mai",
+        "Như Ngà",
+        "Như Ngọc",
+        "Như Phương",
+        "Như Quân",
+        "Như Quỳnh",
+        "Như Thảo",
+        "Như Trân",
+        "Như Tâm",
+        "Như Ý",
+        "Nhất Thương",
+        "Nhật Dạ",
+        "Nhật Hà",
+        "Nhật Hạ",
+        "Nhật Lan",
+        "Nhật Linh",
+        "Nhật Lệ",
+        "Nhật Mai",
+        "Nhật Phương",
+        "Nhật Ánh",
+        "Oanh Thơ",
+        "Oanh Vũ",
+        "Phi Khanh",
+        "Phi Nhung",
+        "Phi Nhạn",
+        "Phi Phi",
+        "Phi Phượng",
+        "Phong Lan",
+        "Phương An",
+        "Phương Anh",
+        "Phương Chi",
+        "Phương Châu",
+        "Phương Diễm",
+        "Phương Dung",
+        "Phương Giang",
+        "Phương Hiền",
+        "Phương Hoa",
+        "Phương Hạnh",
+        "Phương Lan",
+        "Phương Linh",
+        "Phương Liên",
+        "Phương Loan",
+        "Phương Mai",
+        "Phương Nghi",
+        "Phương Ngọc",
+        "Phương Nhi",
+        "Phương Nhung",
+        "Phương Phương",
+        "Phương Quyên",
+        "Phương Quân",
+        "Phương Quế",
+        "Phương Quỳnh",
+        "Phương Thanh",
+        "Phương Thi",
+        "Phương Thùy",
+        "Phương Thảo",
+        "Phương Thủy",
+        "Phương Trang",
+        "Phương Trinh",
+        "Phương Trà",
+        "Phương Trâm",
+        "Phương Tâm",
+        "Phương Uyên",
+        "Phương Yến",
+        "Phước Bình",
+        "Phước Huệ",
+        "Phượng Bích",
+        "Phượng Liên",
+        "Phượng Loan",
+        "Phượng Lệ",
+        "Phượng Nga",
+        "Phượng Nhi",
+        "Phượng Tiên",
+        "Phượng Uyên",
+        "Phượng Vy",
+        "Phượng Vũ",
+        "Phụng Yến",
+        "Quế Anh",
+        "Quế Chi",
+        "Quế Linh",
+        "Quế Lâm",
+        "Quế Phương",
+        "Quế Thu",
+        "Quỳnh Anh",
+        "Quỳnh Chi",
+        "Quỳnh Dao",
+        "Quỳnh Dung",
+        "Quỳnh Giang",
+        "Quỳnh Giao",
+        "Quỳnh Hoa",
+        "Quỳnh Hà",
+        "Quỳnh Hương",
+        "Quỳnh Lam",
+        "Quỳnh Liên",
+        "Quỳnh Lâm",
+        "Quỳnh Nga",
+        "Quỳnh Ngân",
+        "Quỳnh Nhi",
+        "Quỳnh Nhung",
+        "Quỳnh Như",
+        "Quỳnh Phương",
+        "Quỳnh Sa",
+        "Quỳnh Thanh",
+        "Quỳnh Thơ",
+        "Quỳnh Tiên",
+        "Quỳnh Trang",
+        "Quỳnh Trâm",
+        "Quỳnh Vân",
+        "Sao Băng",
+        "Sao Mai",
+        "Song Kê",
+        "Song Lam",
+        "Song Oanh",
+        "Song Thư",
+        "Sông Hà",
+        "Sông Hương",
+        "Sơn Ca",
+        "Sơn Tuyền",
+        "Sương Sương",
+        "Thanh Bình",
+        "Thanh Dân",
+        "Thanh Giang",
+        "Thanh Hiếu",
+        "Thanh Hiền",
+        "Thanh Hoa",
+        "Thanh Huyền",
+        "Thanh Hà",
+        "Thanh Hương",
+        "Thanh Hường",
+        "Thanh Hạnh",
+        "Thanh Hảo",
+        "Thanh Hằng",
+        "Thanh Hồng",
+        "Thanh Kiều",
+        "Thanh Lam",
+        "Thanh Lan",
+        "Thanh Loan",
+        "Thanh Lâm",
+        "Thanh Mai",
+        "Thanh Mẫn",
+        "Thanh Nga",
+        "Thanh Nguyên",
+        "Thanh Ngân",
+        "Thanh Ngọc",
+        "Thanh Nhung",
+        "Thanh Nhàn",
+        "Thanh Nhã",
+        "Thanh Phương",
+        "Thanh Thanh",
+        "Thanh Thiên",
+        "Thanh Thu",
+        "Thanh Thúy",
+        "Thanh Thư",
+        "Thanh Thảo",
+        "Thanh Thủy",
+        "Thanh Trang",
+        "Thanh Trúc",
+        "Thanh Tuyết",
+        "Thanh Tuyền",
+        "Thanh Tâm",
+        "Thanh Uyên",
+        "Thanh Vy",
+        "Thanh Vân",
+        "Thanh Xuân",
+        "Thanh Yến",
+        "Thanh Đan",
+        "Thi Cầm",
+        "Thi Ngôn",
+        "Thi Thi",
+        "Thi Xuân",
+        "Thi Yến",
+        "Thiên Di",
+        "Thiên Duyên",
+        "Thiên Giang",
+        "Thiên Hà",
+        "Thiên Hương",
+        "Thiên Khánh",
+        "Thiên Kim",
+        "Thiên Lam",
+        "Thiên Lan",
+        "Thiên Mai",
+        "Thiên Mỹ",
+        "Thiên Nga",
+        "Thiên Nương",
+        "Thiên Phương",
+        "Thiên Thanh",
+        "Thiên Thêu",
+        "Thiên Thư",
+        "Thiên Thảo",
+        "Thiên Trang",
+        "Thiên Tuyền",
+        "Thiếu Mai",
+        "Thiều Ly",
+        "Thiện Mỹ",
+        "Thiện Tiên",
+        "Thu Duyên",
+        "Thu Giang",
+        "Thu Hiền",
+        "Thu Hoài",
+        "Thu Huyền",
+        "Thu Huệ",
+        "Thu Hà",
+        "Thu Hậu",
+        "Thu Hằng",
+        "Thu Hồng",
+        "Thu Linh",
+        "Thu Liên",
+        "Thu Loan",
+        "Thu Mai",
+        "Thu Minh",
+        "Thu Nga",
+        "Thu Nguyệt",
+        "Thu Ngà",
+        "Thu Ngân",
+        "Thu Ngọc",
+        "Thu Nhiên",
+        "Thu Oanh",
+        "Thu Phong",
+        "Thu Phương",
+        "Thu Phượng",
+        "Thu Sương",
+        "Thu Thuận",
+        "Thu Thảo",
+        "Thu Thủy",
+        "Thu Trang",
+        "Thu Việt",
+        "Thu Vân",
+        "Thu Vọng",
+        "Thu Yến",
+        "Thuần Hậu",
+        "Thy Khanh",
+        "Thy Oanh",
+        "Thy Trúc",
+        "Thy Vân",
+        "Thái Chi",
+        "Thái Hà",
+        "Thái Hồng",
+        "Thái Lan",
+        "Thái Lâm",
+        "Thái Thanh",
+        "Thái Thảo",
+        "Thái Tâm",
+        "Thái Vân",
+        "Thùy Anh",
+        "Thùy Dung",
+        "Thùy Dương",
+        "Thùy Giang",
+        "Thùy Linh",
+        "Thùy Mi",
+        "Thùy My",
+        "Thùy Nhi",
+        "Thùy Như",
+        "Thùy Oanh",
+        "Thùy Uyên",
+        "Thùy Vân",
+        "Thúy Anh",
+        "Thúy Diễm",
+        "Thúy Hiền",
+        "Thúy Huyền",
+        "Thúy Hà",
+        "Thúy Hương",
+        "Thúy Hường",
+        "Thúy Hạnh",
+        "Thúy Hằng",
+        "Thúy Kiều",
+        "Thúy Liên",
+        "Thúy Liễu",
+        "Thúy Loan",
+        "Thúy Mai",
+        "Thúy Minh",
+        "Thúy My",
+        "Thúy Nga",
+        "Thúy Ngà",
+        "Thúy Ngân",
+        "Thúy Ngọc",
+        "Thúy Phượng",
+        "Thúy Quỳnh",
+        "Thúy Vi",
+        "Thúy Vy",
+        "Thúy Vân",
+        "Thơ Thơ",
+        "Thư Lâm",
+        "Thư Sương",
+        "Thương Huyền",
+        "Thương Nga",
+        "Thương Thương",
+        "Thường Xuân",
+        "Thạch Thảo",
+        "Thảo Hương",
+        "Thảo Hồng",
+        "Thảo Linh",
+        "Thảo Ly",
+        "Thảo Mai",
+        "Thảo My",
+        "Thảo Nghi",
+        "Thảo Nguyên",
+        "Thảo Nhi",
+        "Thảo Quyên",
+        "Thảo Tiên",
+        "Thảo Trang",
+        "Thảo Uyên",
+        "Thảo Vy",
+        "Thảo Vân",
+        "Thục Anh",
+        "Thục Khuê",
+        "Thục Nhi",
+        "Thục Oanh",
+        "Thục Quyên",
+        "Thục Trang",
+        "Thục Trinh",
+        "Thục Tâm",
+        "Thục Uyên",
+        "Thục Vân",
+        "Thục Ðoan",
+        "Thục Ðào",
+        "Thục Ðình",
+        "Thụy Du",
+        "Thụy Khanh",
+        "Thụy Linh",
+        "Thụy Lâm",
+        "Thụy Miên",
+        "Thụy Nương",
+        "Thụy Trinh",
+        "Thụy Trâm",
+        "Thụy Uyên",
+        "Thụy Vân",
+        "Thụy Ðào",
+        "Thủy Hằng",
+        "Thủy Hồng",
+        "Thủy Linh",
+        "Thủy Minh",
+        "Thủy Nguyệt",
+        "Thủy Quỳnh",
+        "Thủy Tiên",
+        "Thủy Trang",
+        "Thủy Tâm",
+        "Tinh Tú",
+        "Tiên Phương",
+        "Tiểu Mi",
+        "Tiểu My",
+        "Tiểu Quỳnh",
+        "Trang Anh",
+        "Trang Linh",
+        "Trang Nhã",
+        "Trang Tâm",
+        "Trang Ðài",
+        "Triều Nguyệt",
+        "Triều Thanh",
+        "Triệu Mẫn",
+        "Trung Anh",
+        "Trà Giang",
+        "Trà My",
+        "Trâm Anh",
+        "Trâm Oanh",
+        "Trân Châu",
+        "Trúc Chi",
+        "Trúc Lam",
+        "Trúc Lan",
+        "Trúc Linh",
+        "Trúc Liên",
+        "Trúc Loan",
+        "Trúc Ly",
+        "Trúc Lâm",
+        "Trúc Mai",
+        "Trúc Phương",
+        "Trúc Quân",
+        "Trúc Quỳnh",
+        "Trúc Vy",
+        "Trúc Vân",
+        "Trúc Ðào",
+        "Trúc Đào",
+        "Trầm Hương",
+        "Tuyết Anh",
+        "Tuyết Băng",
+        "Tuyết Chi",
+        "Tuyết Hoa",
+        "Tuyết Hân",
+        "Tuyết Hương",
+        "Tuyết Hồng",
+        "Tuyết Lan",
+        "Tuyết Loan",
+        "Tuyết Lâm",
+        "Tuyết Mai",
+        "Tuyết Nga",
+        "Tuyết Nhi",
+        "Tuyết Nhung",
+        "Tuyết Oanh",
+        "Tuyết Thanh",
+        "Tuyết Trinh",
+        "Tuyết Trầm",
+        "Tuyết Tâm",
+        "Tuyết Vy",
+        "Tuyết Vân",
+        "Tuyết Xuân",
+        "Tuyền Lâm",
+        "Tuệ Lâm",
+        "Tuệ Mẫn",
+        "Tuệ Nhi",
+        "Tâm Hiền",
+        "Tâm Hạnh",
+        "Tâm Hằng",
+        "Tâm Khanh",
+        "Tâm Linh",
+        "Tâm Nguyên",
+        "Tâm Nguyệt",
+        "Tâm Nhi",
+        "Tâm Như",
+        "Tâm Thanh",
+        "Tâm Trang",
+        "Tâm Ðoan",
+        "Tâm Đan",
+        "Tùng Linh",
+        "Tùng Lâm",
+        "Tùng Quân",
+        "Tùy Anh",
+        "Tùy Linh",
+        "Tú Anh",
+        "Tú Ly",
+        "Tú Nguyệt",
+        "Tú Quyên",
+        "Tú Quỳnh",
+        "Tú Sương",
+        "Tú Trinh",
+        "Tú Tâm",
+        "Tú Uyên",
+        "Túy Loan",
+        "Tường Chinh",
+        "Tường Vi",
+        "Tường Vy",
+        "Tường Vân",
+        "Tịnh Lâm",
+        "Tịnh Nhi",
+        "Tịnh Như",
+        "Tịnh Tâm",
+        "Tịnh Yên",
+        "Tố Loan",
+        "Tố Nga",
+        "Tố Nhi",
+        "Tố Quyên",
+        "Tố Tâm",
+        "Tố Uyên",
+        "Từ Dung",
+        "Từ Ân",
+        "Uyên Minh",
+        "Uyên My",
+        "Uyên Nhi",
+        "Uyên Phương",
+        "Uyên Thi",
+        "Uyên Thy",
+        "Uyên Thơ",
+        "Uyên Trâm",
+        "Uyên Vi",
+        "Uyển Khanh",
+        "Uyển My",
+        "Uyển Nghi",
+        "Uyển Nhi",
+        "Uyển Nhã",
+        "Uyển Như",
+        "Vi Quyên",
+        "Vinh Diệu",
+        "Việt Hà",
+        "Việt Hương",
+        "Việt Khuê",
+        "Việt Mi",
+        "Việt Nga",
+        "Việt Nhi",
+        "Việt Thi",
+        "Việt Trinh",
+        "Việt Tuyết",
+        "Việt Yến",
+        "Vy Lam",
+        "Vy Lan",
+        "Vàng Anh",
+        "Vành Khuyên",
+        "Vân Anh",
+        "Vân Chi",
+        "Vân Du",
+        "Vân Hà",
+        "Vân Hương",
+        "Vân Khanh",
+        "Vân Khánh",
+        "Vân Linh",
+        "Vân Ngọc",
+        "Vân Nhi",
+        "Vân Phi",
+        "Vân Phương",
+        "Vân Quyên",
+        "Vân Quỳnh",
+        "Vân Thanh",
+        "Vân Thúy",
+        "Vân Thường",
+        "Vân Tiên",
+        "Vân Trang",
+        "Vân Trinh",
+        "Vũ Hồng",
+        "Xuyến Chi",
+        "Xuân Bảo",
+        "Xuân Dung",
+        "Xuân Hiền",
+        "Xuân Hoa",
+        "Xuân Hân",
+        "Xuân Hương",
+        "Xuân Hạnh",
+        "Xuân Lan",
+        "Xuân Linh",
+        "Xuân Liễu",
+        "Xuân Loan",
+        "Xuân Lâm",
+        "Xuân Mai",
+        "Xuân Nghi",
+        "Xuân Ngọc",
+        "Xuân Nhi",
+        "Xuân Nhiên",
+        "Xuân Nương",
+        "Xuân Phương",
+        "Xuân Phượng",
+        "Xuân Thanh",
+        "Xuân Thu",
+        "Xuân Thảo",
+        "Xuân Thủy",
+        "Xuân Trang",
+        "Xuân Tâm",
+        "Xuân Uyên",
+        "Xuân Vân",
+        "Xuân Yến",
+        "Xuân xanh",
+        "Yên Bằng",
+        "Yên Mai",
+        "Yên Nhi",
+        "Yên Ðan",
+        "Yên Đan",
+        "Yến Anh",
+        "Yến Hồng",
+        "Yến Loan",
+        "Yến Mai",
+        "Yến My",
+        "Yến Nhi",
+        "Yến Oanh",
+        "Yến Phương",
+        "Yến Phượng",
+        "Yến Thanh",
+        "Yến Thảo",
+        "Yến Trang",
+        "Yến Trinh",
+        "Yến Trâm",
+        "Yến Ðan",
+        "Ái Hồng",
+        "Ái Khanh",
+        "Ái Linh",
+        "Ái Nhi",
+        "Ái Nhân",
+        "Ái Thi",
+        "Ái Thy",
+        "Ái Vân",
+        "Ánh Dương",
+        "Ánh Hoa",
+        "Ánh Hồng",
+        "Ánh Linh",
+        "Ánh Lệ",
+        "Ánh Mai",
+        "Ánh Nguyệt",
+        "Ánh Ngọc",
+        "Ánh Thơ",
+        "Ánh Trang",
+        "Ánh Tuyết",
+        "Ánh Xuân",
+        "Ðan Khanh",
+        "Ðan Quỳnh",
+        "Ðan Thu",
+        "Ðinh Hương",
+        "Ðoan Thanh",
+        "Ðoan Trang",
+        "Ðài Trang",
+        "Ðông Nghi",
+        "Ðông Nhi",
+        "Ðông Trà",
+        "Ðông Tuyền",
+        "Ðông Vy",
+        "Ðông Ðào",
+        "Ðồng Dao",
+        "Ý Bình",
+        "Ý Lan",
+        "Ý Nhi",
+        "Đan Linh",
+        "Đan Quỳnh",
+        "Đan Thanh",
+        "Đan Thu",
+        "Đan Thư",
+        "Đan Tâm",
+        "Đinh Hương",
+        "Đoan Thanh",
+        "Đoan Trang",
+        "Đài Trang",
+        "Đông Nghi",
+        "Đông Trà",
+        "Đông Tuyền",
+        "Đông Vy",
+        "Đơn Thuần",
+        "Đức Hạnh",
+        "Ấu Lăng"
+    ]
+    let OtherName = [".", ",", "/", "%", "&", "*", "-", "+"];
     try {
         var Name;
-            if (name == " " || name == null) return "UNKNOWN";
-            switch (female_name.some(a => name.includes(a))) {
-                case true: {
-                    if (!OtherName.includes(name)) Name = "FEMALE";
-                    else Name = ['FEMALE','MALE'][Math.floor(Math.random() * 2)]; // just temp 🌚
-                }
-            break;
-                case false: {
-                    if (female_name.some(a => name.split(' ')[name.split(' ').length - 1] == a)) Name = "FEMALE";
-                    else if (!OtherName.includes(name) && !female_name.includes(name)) Name = "MALE";
-                    else Name = ['FEMALE','MALE'][Math.floor(Math.random() * 2)]; // just temp 🌚
-                }
-            break;
-        } 
+        if (name == " " || name == null) return "UNKNOWN";
+        switch (female_name.some(a => name.includes(a))) {
+            case true: {
+                if (!OtherName.includes(name)) Name = "FEMALE";
+                else Name = ['FEMALE', 'MALE'][Math.floor(Math.random() * 2)]; // just temp 🌚
+            }
+                break;
+            case false: {
+                if (female_name.some(a => name.split(' ')[name.split(' ').length - 1] == a)) Name = "FEMALE";
+                else if (!OtherName.includes(name) && !female_name.includes(name)) Name = "MALE";
+                else Name = ['FEMALE', 'MALE'][Math.floor(Math.random() * 2)]; // just temp 🌚
+            }
+                break;
+        }
     }
     catch (e) {
         return "UNKNOWN";
@@ -2213,130 +2191,49 @@ function getGenderByPhysicalMethod(name) {
  */
 
 function formatDeltaEvent(m) {
-    var { updateData,getData,hasData } = require('./Extra/ExtraGetThread');
     var logMessageType;
     var logMessageData;
 
-switch (m.class) {
-    case "AdminTextMessage":
-        logMessageType = getAdminTextMessageType(m);
-            logMessageData = m.untypedData;
-        break;
-    case "ThreadName":
-        logMessageType = "log:thread-name";
-            logMessageData = { name: m.name };
-        break;
-    case "ParticipantsAddedToGroupThread":
-        logMessageType = "log:subscribe";
-            logMessageData = { addedParticipants: m.addedParticipants };
-        break;
-    case "ParticipantLeftGroupThread":
-        logMessageType = "log:unsubscribe";
-        logMessageData = { leftParticipantFbId: m.leftParticipantFbId };
-    break;
-    case "UserLocation": {
-        logMessageType = "log:user-location";
-        logMessageData = {
-            Image: m.attachments[0].mercury.extensible_attachment.story_attachment.media.image,
-            Location: m.attachments[0].mercury.extensible_attachment.story_attachment.target.location_title,
-            coordinates: m.attachments[0].mercury.extensible_attachment.story_attachment.target.coordinate,
-            url: m.attachments[0].mercury.extensible_attachment.story_attachment.url
-        };
-    }
-}
-switch (hasData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()))) {
-    case true: {
-        switch (logMessageType) {
-            case "log:thread-color": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                x.emoji = (logMessageData.theme_emoji || x.emoji);
-                x.color = (logMessageData['theme_color'] || x.color);
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:thread-icon": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                x.emoji = (logMessageData['thread_icon'] || x.emoji);
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:user-nickname": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                x.nicknames[logMessageData.participant_id] = (logMessageData.nickname.length == 0 ? x.userInfo.find(i => i.id == String(logMessageData.participant_id)).name : logMessageData.nickname);
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:thread-admins": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                switch (logMessageData.ADMIN_EVENT) {
-                    case "add_admin": {
-                        x.adminIDs.push({ id: logMessageData.TARGET_ID });
-                    }
-                        break;
-                    case "remove_admin": {
-                        x.adminIDs = x.adminIDs.filter(item => item.id != logMessageData.TARGET_ID);
-                    }
-                    break;
-                }
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:thread-approval-mode": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                if (x.approvalMode == true) { 
-                    x.approvalMode = false;
-                }
-                else {
-                    x.approvalMode = true;
-                }
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:thread-name": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                x.threadName = (logMessageData.name || formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:subscribe": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                for (let o of logMessageData.addedParticipants) {
-                    if (x.userInfo.some(i => i.id == o.userFbId)) continue; 
-                    else {
-                        x.userInfo.push({
-                            id: o.userFbId,
-                            name: o.fullName,
-                            gender: getGenderByPhysicalMethod(o.fullName)
-                        });
-                        x.participantIDs.push(o.userFbId);
-                    }
-                }
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);
-            }
-                break;
-            case "log:unsubscribe": {
-                let x = getData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()));
-                x.participantIDs = x.participantIDs.filter(item => item != logMessageData.leftParticipantFbId);
-                x.userInfo = x.userInfo.filter(item => item.id != logMessageData.leftParticipantFbId);
-                    if (x.adminIDs.some(i => i.id == logMessageData.leftParticipantFbId)) {
-                        x.adminIDs = x.adminIDs.filter(item => item.id != logMessageData.leftParticipantFbId);
-                    }
-                updateData(formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),x);      
-            }
+    // log:thread-color => {theme_color}
+    // log:user-nickname => {participant_id, nickname}
+    // log:thread-icon => {thread_icon}
+    // log:thread-name => {name}
+    // log:subscribe => {addedParticipants - [Array]}
+    // log:unsubscribe => {leftParticipantFbId}
+    // console.log(m)
+    switch (m.class) {
+        case "JoinableMode":
+            if (m.mode) return;
+            logMessageType = "joinable_group_link_reset"
+            logMessageData = { link: m.link }
             break;
-        }
+        case "AdminTextMessage":
+            logMessageType = getAdminTextMessageType(m);
+            logMessageData = m.untypedData;
+            break;
+        case "ThreadName":
+            logMessageType = "log:thread-name";
+            logMessageData = { name: m.name };
+            break;
+        case "ParticipantsAddedToGroupThread":
+            logMessageType = "log:subscribe";
+            logMessageData = { addedParticipants: m.addedParticipants };
+            break;
+        case "ParticipantLeftGroupThread":
+            logMessageType = "log:unsubscribe";
+            logMessageData = { leftParticipantFbId: m.leftParticipantFbId };
+            break;
     }
-}
 
-return {
-    type: "event",
-    threadID: formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),
-    logMessageType: logMessageType,
-    logMessageData: logMessageData,
-    logMessageBody: m.messageMetadata.adminText,
-    author: m.messageMetadata.actorFbId,
-    participantIDs: m.participants || []
-    };  
+    return {
+        type: "event",
+        threadID: formatID((m.messageMetadata.threadKey.threadFbId || m.messageMetadata.threadKey.otherUserFbId).toString()),
+        logMessageType: logMessageType,
+        logMessageData: logMessageData,
+        logMessageBody: m.messageMetadata.adminText,
+        author: m.messageMetadata.actorFbId,
+        participantIDs: (m.participants || []).map(p => p.toString())
+    };
 }
 
 /**
@@ -2344,7 +2241,7 @@ return {
  */
 
 function formatTyp(event) {
-return {
+    return {
         isTyping: !!event.st,
         from: event.from.toString(),
         threadID: formatID((event.to || event.thread_fbid || event.from).toString()),
@@ -2360,16 +2257,16 @@ return {
  * @param {{ threadKey: { otherUserFbId: any; threadFbId: any; }; actorFbId: any; actionTimestampMs: any; }} delta
  */
 
-function formatDeltaReadReceipt(delta) {
-    // otherUserFbId seems to be used as both the readerID and the threadID in a 1-1 chat.
-    // In a group chat actorFbId is used for the reader and threadFbId for the thread.
-    return {
-        reader: (delta.threadKey.otherUserFbId || delta.actorFbId).toString(),
-        time: delta.actionTimestampMs,
-        threadID: formatID((delta.threadKey.otherUserFbId || delta.threadKey.threadFbId).toString()),
-        type: "read_receipt"
-    };
-}
+// function formatDeltaReadReceipt(delta) {
+//     // otherUserFbId seems to be used as both the readerID and the threadID in a 1-1 chat.
+//     // In a group chat actorFbId is used for the reader and threadFbId for the thread.
+//     return {
+//         reader: (delta.threadKey.otherUserFbId || delta.actorFbId).toString(),
+//         time: delta.actionTimestampMs,
+//         threadID: formatID((delta.threadKey.otherUserFbId || delta.threadKey.threadFbId).toString()),
+//         type: "read_receipt"
+//     };
+// }
 
 /**
  * @param {{ reader: { toString: () => any; }; time: any; thread_fbid: any; }} event
@@ -2405,39 +2302,11 @@ function formatRead(event) {
 function getFrom(str, startToken, endToken) {
     var start = str.indexOf(startToken) + startToken.length;
     if (start < startToken.length) return "";
+
     var lastHalf = str.substring(start);
     var end = lastHalf.indexOf(endToken);
-    if (end === -1) throw Error("Could not find endTime " + endToken + " in the given string.");
+    if (end === -1) throw Error("Could not find endTime `" + endToken + "` in the given string.");
     return lastHalf.substring(0, end);
-}
-
-
-function getFroms(str, startToken, endToken) {
-    //advanced search by kanzuuuuuuuuuu 
-    let results = [];
-    let currentIndex = 0;
-    
-    while (true) {
-        let start = str.indexOf(startToken, currentIndex);
-        if (start === -1) break;
-        
-        start += startToken.length;
-        
-        let lastHalf = str.substring(start);
-        let end = lastHalf.indexOf(endToken);
-        
-        if (end === -1) {
-            if (results.length === 0) {
-                throw Error("Could not find endToken `" + endToken + "` in the given string.");
-            }
-            break;
-        }
-        
-        results.push(lastHalf.substring(0, end));
-        currentIndex = start + end + endToken.length;
-    }
-    
-    return results.length === 0 ? "" : results.length === 1 ? results[0] : results;
 }
 
 /**
@@ -2446,7 +2315,7 @@ function getFroms(str, startToken, endToken) {
 
 function makeParsable(html) {
     let withoutForLoop = html.replace(/for\s*\(\s*;\s*;\s*\)\s*;\s*/
-, "");
+        , "");
 
     // (What the fuck FB, why windows style newlines?)
     // So sometimes FB will send us base multiple objects in the same response.
@@ -2469,10 +2338,10 @@ function makeParsable(html) {
 
 function arrToForm(form) {
     return arrayToObject(form,
-        function(/** @type {{ name: any; }} */v) {
+        function (/** @type {{ name: any; }} */v) {
             return v.name;
         },
-        function(/** @type {{ val: any; }} */v) {
+        function (/** @type {{ val: any; }} */v) {
             return v.val;
         }
     );
@@ -2485,8 +2354,8 @@ function arrToForm(form) {
  */
 
 function arrayToObject(arr, getKey, getValue) {
-    return arr.reduce(function(/** @type {{ [x: string]: any; }} */
- acc, /** @type {any} */val) {
+    return arr.reduce(function (/** @type {{ [x: string]: any; }} */
+        acc, /** @type {any} */val) {
         acc[getKey(val)] = getValue(val);
         return acc;
     }, {});
@@ -2553,9 +2422,9 @@ function makeDefaults(html, userID, ctx) {
             // __af: siteData.features,
             fb_dtsg: ctx.fb_dtsg ? ctx.fb_dtsg : fb_dtsg,
             jazoest: ctx.ttstamp ? ctx.ttstamp : ttstamp
-                // __spin_r: siteData.__spin_r,
-                // __spin_b: siteData.__spin_b,
-                // __spin_t: siteData.__spin_t,
+            // __spin_r: siteData.__spin_r,
+            // __spin_b: siteData.__spin_b,
+            // __spin_t: siteData.__spin_t,
         };
 
         // @TODO this is probably not needed.
@@ -2623,8 +2492,8 @@ function makeDefaults(html, userID, ctx) {
 
 function parseAndCheckLogin(ctx, defaultFuncs, retryCount) {
     if (retryCount == undefined) retryCount = 0;
-    return function(/** @type {{ body: string; statusCode: string | number; request: { uri: { protocol: string; hostname: string; pathname: string; }; headers: { [x: string]: string; }; formData: any; method: string; }; }} */data) {
-        return bluebird.try(function() {
+    return function (data) {
+        return bluebird.try(function () {
             log.verbose("parseAndCheckLogin", data.body);
             if (data.statusCode >= 500 && data.statusCode < 600) {
                 if (retryCount >= 5) {
@@ -2638,20 +2507,16 @@ function parseAndCheckLogin(ctx, defaultFuncs, retryCount) {
                 var retryTime = Math.floor(Math.random() * 5000);
                 log.warn("parseAndCheckLogin", "Got status code " + data.statusCode + " - " + retryCount + ". attempt to retry in " + retryTime + " milliseconds...");
                 var url = data.request.uri.protocol + "//" + data.request.uri.hostname + data.request.uri.pathname;
-                if (data.request.headers["Content-Type"].split(";")[0] === "multipart/form-data") {
-                    return bluebird.delay(retryTime).then(() => defaultFuncs.postFormData(url, ctx.jar, data.request.formData, {}))
-                        .then(parseAndCheckLogin(ctx, defaultFuncs, retryCount));
-                } else {
-                    return bluebird.delay(retryTime).then(() => defaultFuncs.post(url, ctx.jar, data.request.formData))
-                        .then(parseAndCheckLogin(ctx, defaultFuncs, retryCount));
-                }
+                if (data.request.headers["Content-Type"].split(";")[0] === "multipart/form-data") return bluebird.delay(retryTime).then(() => defaultFuncs.postFormData(url, ctx.jar, data.request.formData, {})).then(parseAndCheckLogin(ctx, defaultFuncs, retryCount));
+                else return bluebird.delay(retryTime).then(() => defaultFuncs.post(url, ctx.jar, data.request.formData)).then(parseAndCheckLogin(ctx, defaultFuncs, retryCount));
             }
             if (data.statusCode !== 200) throw new Error("parseAndCheckLogin got status code: " + data.statusCode + ". Bailing out of trying to parse response.");
 
             var res = null;
             try {
                 res = JSON.parse(makeParsable(data.body));
-            } catch (e) {
+            }
+            catch (e) {
                 throw {
                     error: "JSON.parse error. Check the `detail` property on this error.",
                     detail: e,
@@ -2686,44 +2551,8 @@ function parseAndCheckLogin(ctx, defaultFuncs, retryCount) {
                 }
             }
 
-            if (res.error === 1357001) {
-                if (global.Fca.Require.Sagor.AutoLogin && global.Fca.Require.Sagor.CheckPointBypass['956'].Allow) {
-                    return global.Fca.Require.logger.Warning(global.Fca.Require.Language.Index.Bypass_956, async function() {
-                        const Check = () => new Promise((re) => {
-                            defaultFuncs.get('https://facebook.com', ctx.jar).then(function(res) {
-                                if (res.headers.location && res.headers.location.includes('https://www.facebook.com/checkpoint/')) {
-                                    if (res.headers.location.includes('828281030927956')) return global.Fca.Action('Bypass', ctx, "956", defaultFuncs)
-                                    else if (res.request.uri && res.request.uri.href.includes("https://www.facebook.com/checkpoint/")) {
-                                        if (res.request.uri.href.includes('601051028565049')) {
-                                            return global.Fca.BypassAutomationNotification(undefined, ctx.jar, ctx.globalOptions, undefined ,process.env.UID)
-                                        }
-                                    }
-                                    else return global.Fca.Require.logger.Error(global.Fca.Require.Language.Index.ErrAppState);
-                                }
-                                else return global.Fca.Require.logger.Warning(global.Fca.Require.Language.Index.AutoLogin, function() {
-                                    return global.Fca.Action('AutoLogin');
-                                });
-                            })
-                        })
-                        await Check();
-                    });
-                }
-                if (res.request.uri && res.request.uri.href.includes("https://www.facebook.com/checkpoint/")) {
-                    if (res.request.uri.href.includes('601051028565049')) {
-                        return global.Fca.BypassAutomationNotification(undefined, ctx.jar, ctx.globalOptions, undefined ,process.env.UID)
-                    }
-                }
-                if (global.Fca.Require.Sagor.AutoLogin) {
-                    return global.Fca.Require.logger.Warning(global.Fca.Require.Language.Index.AutoLogin, function() {
-                        return global.Fca.Action('AutoLogin');
-                    });
-                } 
-                else if (!global.Fca.Require.Sagor.AutoLogin) {
-                    return global.Fca.Require.logger.Error(global.Fca.Require.Language.Index.ErrAppState);
-                }
-                return;
-            }
-            else return res;
+            if (res.error === 1357001) throw { error: "Not logged in." };
+            return res;
         });
     };
 }
@@ -2733,9 +2562,9 @@ function parseAndCheckLogin(ctx, defaultFuncs, retryCount) {
  */
 
 function saveCookies(jar) {
-    return function(/** @type {{ headers: { [x: string]: any[]; }; }} */res) {
+    return function (/** @type {{ headers: { [x: string]: any[]; }; }} */res) {
         var cookies = res.headers["set-cookie"] || [];
-        cookies.forEach(function(/** @type {string} */c) {
+        cookies.forEach(function (/** @type {string} */c) {
             if (c.indexOf(".facebook.com") > -1) { // yo wtf is this?
                 jar.setCookie(c, "https://www.facebook.com");
                 jar.setCookie(c.replace(/domain=\.facebook\.com/, "domain=.messenger.com"), "https://www.messenger.com");
@@ -2900,7 +2729,7 @@ function decodeClientPayload(payload) {
                     out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
                     break;
                 case 14:
-                    char2 = array[i++]; 
+                    char2 = array[i++];
                     char3 = array[i++];
                     out += String.fromCharCode(((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
                     break;
@@ -2915,40 +2744,11 @@ function decodeClientPayload(payload) {
  * @param {{ getCookies: (arg0: string) => string | any[]; }} jar
  */
 
-function getAppState(jar, Encode) {
-    var prettyMilliseconds = require('pretty-ms');
-    var getText = globalThis.Fca.getText;
-    var Security = require("./Extra/Security/Base");
-    var appstate = jar.getCookies("https://www.facebook.com").concat(jar.getCookies("https://facebook.com")).concat(jar.getCookies("https://www.messenger.com"));
-    var logger = require('./logger'),languageFile = require('./Language/index.json');
-    var Language = languageFile.find(i => i.Language == globalThis.Fca.Require.Sagor.Language).Folder.Index;
-    var data;
-        switch (require(process.cwd() + "/SagorFca.json").EncryptFeature) {
-            case true: {
-                if (Encode == undefined) Encode = true;
-                if (process.env['FBKEY'] != undefined && Encode) {
-                    logger.Normal(Language.EncryptSuccess);
-                    data = Security(JSON.stringify(appstate),process.env['FBKEY'],"Encrypt");
-                }
-                else return appstate;
-            }
-                break;
-            case false: {
-                data = appstate;
-            }
-                break;
-            default: {
-                logger.Normal(getText(Language.IsNotABoolean,require(process.cwd() + "/SagorFca.json").EncryptFeature));
-                data = appstate;
-            } 
-        }
-            if(!globalThis.Fca.Setting.get('getAppState')) {
-                logger.Normal(getText(Language.ProcessDone,`${prettyMilliseconds(Date.now() - globalThis.Fca.startTime)}`),function() { globalThis.Fca.Setting.set('getAppState',true); });
-            }
-    return data;
+function getAppState(jar) {
+    return jar.getCookies("https://www.facebook.com").concat(jar.getCookies("https://facebook.com")).concat(jar.getCookies("https://www.messenger.com"));
 }
 
-function getData_Path(Obj , Arr, Stt) {
+function getData_Path(Obj, Arr, Stt) {
     //default stt = 0
     if (Arr.length === 0 && Obj != undefined) {
         return Obj; //object
@@ -2988,42 +2788,42 @@ function setData_Path(obj, path, value) {
 
 function getPaths(obj, parentPath = []) {
     let paths = [];
-        for (let prop in obj) {
-            if (typeof obj[prop] === "object") {
-                paths = paths.concat(getPaths(obj[prop], [...parentPath, prop]));
-            } else {
-                paths.push([...parentPath, prop]);
-            }
+    for (let prop in obj) {
+        if (typeof obj[prop] === "object") {
+            paths = paths.concat(getPaths(obj[prop], [...parentPath, prop]));
+        } else {
+            paths.push([...parentPath, prop]);
         }
+    }
     return paths;
 }
-    
-function cleanHTML (text) {
+
+function cleanHTML(text) {
     text = text.replace(/(<br>)|(<\/?i>)|(<\/?em>)|(<\/?b>)|(!?~)|(&amp;)|(&#039;)|(&lt;)|(&gt;)|(&quot;)/g, (match) => {
         switch (match) {
-          case "<br>":
-            return "\n";
-          case "<i>":
-          case "<em>":
-          case "</i>":
-          case "</em>":
-            return "*";
-          case "<b>":
-          case "</b>":
-            return "**";
-          case "~!":
-          case "!~":
-            return "||";
-          case "&amp;":
-            return "&";
-          case "&#039;":
-            return "'";
-          case "&lt;":
-            return "<";
-          case "&gt;":
-            return ">";
-          case "&quot;":
-            return '"';
+            case "<br>":
+                return "\n";
+            case "<i>":
+            case "<em>":
+            case "</i>":
+            case "</em>":
+                return "*";
+            case "<b>":
+            case "</b>":
+                return "**";
+            case "~!":
+            case "!~":
+                return "||";
+            case "&amp;":
+                return "&";
+            case "&#039;":
+                return "'";
+            case "&lt;":
+                return "<";
+            case "&gt;":
+                return ">";
+            case "&quot;":
+                return '"';
         }
     });
     return text;
@@ -3031,21 +2831,21 @@ function cleanHTML (text) {
 
 module.exports = {
     cleanHTML,
-    isReadableStream:isReadableStream,
-    get:get,
-    post:post,
-    postFormData:postFormData,
-    generateThreadingID:generateThreadingID,
-    generateOfflineThreadingID:generateOfflineThreadingID,
-    getGUID:getGUID,
-    getFrom:getFrom,
-    makeParsable:makeParsable,
-    arrToForm:arrToForm,
-    getSignatureID:getSignatureID,
+    isReadableStream: isReadableStream,
+    get: get,
+    post: post,
+    postFormData: postFormData,
+    generateThreadingID: generateThreadingID,
+    generateOfflineThreadingID: generateOfflineThreadingID,
+    getGUID: getGUID,
+    getFrom: getFrom,
+    makeParsable: makeParsable,
+    arrToForm: arrToForm,
+    getSignatureID: getSignatureID,
     getJar: request.jar,
-    generateTimestampRelative:generateTimestampRelative,
-    makeDefaults:makeDefaults,
-    parseAndCheckLogin:parseAndCheckLogin,
+    generateTimestampRelative: generateTimestampRelative,
+    makeDefaults: makeDefaults,
+    parseAndCheckLogin: parseAndCheckLogin,
     getGender: getGenderByPhysicalMethod,
     getData_Path,
     setData_Path,
@@ -3061,7 +2861,7 @@ module.exports = {
     formatProxyPresence,
     formatPresence,
     formatTyp,
-    formatDeltaReadReceipt,
+    // formatDeltaReadReceipt,
     formatCookie,
     formatThread,
     formatReadReceipt,
@@ -3072,6 +2872,5 @@ module.exports = {
     decodeClientPayload,
     getAppState,
     getAdminTextMessageType,
-    setProxy,
-    getFroms
+    setProxy
 };

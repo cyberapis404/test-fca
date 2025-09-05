@@ -1,448 +1,460 @@
-'use strict';
-/* eslint-disable linebreak-style */
-const utils = require('./utils');
-global.Fca = new Object({
-    isThread: new Array(),
-    isUser: new Array(),
-    startTime: Date.now(),
-    Setting: new Map(),
-    Version: require('./package.json').version,
-    Require: new Object({
-        fs: require("fs"),
-        Fetch: require('got'),
-        log: require("npmlog"),
-        utils: require("./utils.js"),
-        logger: require('./logger.js'),
-        languageFile: require('./Language/index.json'),
-        Security: require('./Extra/Src/uuid.js')
-    }),
-    getText: function(/** @type {any[]} */...Data) {
-        var Main = (Data.splice(0,1)).toString();
-            for (let i = 0; i < Data.length; i++) Main = Main.replace(RegExp(`%${i + 1}`, 'g'), Data[i]);
-        return Main;
-    },
-    Data: new Object({
-        ObjSagor: {
-            "Language": "en",
-            "PreKey": "",
-            "AutoUpdate": true,
-            "MainColor": "#9900FF",
-            "MainName": "[ FCA-SAGOR ]",
-            "Uptime": false,
-            "Config": "default",
-            "DevMode": false,
-            "Login2Fa": false,
-            "AutoLogin": false,
-            "BroadCast": true,
-            "AuthString": "SD4S XQ32 O2JA WXB3 FUX2 OPJ7 Q7JZ 4R6Z | https://i.imgur.com/RAg3rvw.png Please remove this !, Recommend If You Using getUserInfoV2",
-            "EncryptFeature": true,
-            "ResetDataLogin": false,
-            "AutoInstallNode": false,
-            "AntiSendAppState": true,
-            "AutoRestartMinutes": 0,
-            "RestartMQTT_Minutes": 0,
-            "Websocket_Extension": {
-                "Status": false,
-                "ResetData": false,
-                "AppState_Path": "appstate.json"
-            },
-            "HTML": {   
-                "HTML": true,
-                "UserName": "Guest",
-                "MusicLink": "https://drive.google.com/uc?id=1zlAALlxk1TnO7jXtEP_O6yvemtzA2ukA&export=download"
-            },
-            "AntiGetInfo": {
-                "Database_Type": "default", //json or default
-                "AntiGetThreadInfo": true,
-                "AntiGetUserInfo": true
-            },
-            "Stable_Version": {
-                "Accept": false,
-                "Version": ""
-            },
-            "CheckPointBypass": {
-                "956": {
-                    "Allow": false,
-                    "Difficult": "Easy",
-                    "Notification": "Turn on with AutoLogin!"
-                }
-            },
-            "AntiStuckAndMemoryLeak": {
-                "AutoRestart": {
-                    "Use": true,
-                    "Explain": "When this feature is turned on, the system will continuously check and confirm that if memory usage reaches 90%, it will automatically restart to avoid freezing or stopping."
-                },
-                "LogFile": {
-                    "Use": false,
-                    "Explain": "Record memory usage logs to fix errors. Default location: Sagor_Database/memory.logs"
-                }
+"use strict";
+
+var utils = require("./utils");
+var cheerio = require("cheerio");
+var log = require("npmlog");
+/*var { getThemeColors } = require("../../func/utils/log.js");
+var logger = require("../../func/utils/log.js");
+var { cra, cv, cb, co } = getThemeColors();*/
+log.maxRecordSize = 100;
+var checkVerified = null;
+const Boolean_Option = ['online', 'selfListen', 'listenEvents', 'updatePresence', 'forceLogin', 'autoMarkDelivery', 'autoMarkRead', 'listenTyping', 'autoReconnect', 'emitReady'];
+global.ditconmemay = false;
+
+function setOptions(globalOptions, options) {
+    Object.keys(options).map(function (key) {
+        switch (Boolean_Option.includes(key)) {
+            case true: {
+                globalOptions[key] = Boolean(options[key]);
+                break;
             }
-        },
-        CountTime: function() {
-            var fs = global.Fca.Require.fs;
-            if (fs.existsSync(__dirname + '/CountTime.json')) {
-                try {
-                    var data = Number(fs.readFileSync(__dirname + '/CountTime.json', 'utf8')),
-                    hours = Math.floor(data / (60 * 60));
-                }
-                catch (e) {
-                    fs.writeFileSync(__dirname + '/CountTime.json', 0);
-                    hours = 0;
-                }
-            }
-            else {
-                hours = 0;
-            }
-            return `${hours} Hours`;
-        }
-    }),
-    Action: async function(Type, ctx, Code, defaultFuncs) {
-        switch (Type) {
-            case "AutoLogin": {
-                var Database = require('./Extra/Database');
-                var logger = global.Fca.Require.logger;
-                var Email = (Database().get('Account')).replace(RegExp('"', 'g'), ''); //hmm IDK
-                var PassWord = (Database().get('Password')).replace(RegExp('"', 'g'), '');
-                require('./Main')({ email: Email, password: PassWord},async (error, api) => {
-                    if (error) {
-                        logger.Error(JSON.stringify(error,null,2), function() { logger.Error("AutoLogin Failed!", function() { process.exit(0); }) });
+            case false: {
+                switch (key) {
+                    case 'pauseLog': {
+                        if (options.pauseLog) log.pause();
+                        else log.resume();
+                        break;
                     }
-                    try {
-                        Database().set("TempState", Database().get('Through2Fa'));
+                    case 'logLevel': {
+                        log.level = options.logLevel;
+                        globalOptions.logLevel = options.logLevel;
+                        break;
                     }
-                    catch(e) {
-                        logger.Warning(global.Fca.Require.Language.Index.ErrDatabase);
-                            logger.Error();
-                        process.exit(0);
+                    case 'logRecordSize': {
+                        log.maxRecordSize = options.logRecordSize;
+                        globalOptions.logRecordSize = options.logRecordSize;
+                        break;
                     }
-                    process.exit(1);
-                });
-            }
-            break;
-            case "Bypass": {
-                const Bypass_Module = require(`./Extra/Bypass/${Code}`);
-                const logger = global.Fca.Require.logger;
-                switch (Code) {
-                    case 956: {
-                        async function P1() {
-                            return new Promise((resolve, reject) => {
-                                try {
-                                    utils.get('https://www.facebook.com/checkpoint/828281030927956/?next=https%3A%2F%2Faccountscenter.facebook.com%2Fpassword_and_security', ctx.jar, null, ctx.globalOptions).then(function(data) {
-                                        resolve(Bypass_Module.Check(data.body));    
-                                    })
-                                } 
-                                catch (error) {
-                                    reject(error);
-                                }
-                            })
+                    case 'pageID': {
+                        globalOptions.pageID = options.pageID.toString();
+                        break;
+                    }
+                    case 'userAgent': {
+                        globalOptions.userAgent = (options.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
+                        break;
+                    }
+                    case 'proxy': {
+                        if (typeof options.proxy != "string") {
+                            delete globalOptions.proxy;
+                            utils.setProxy();
+                        } else {
+                            globalOptions.proxy = options.proxy;
+                            utils.setProxy(globalOptions.proxy);
                         }
-                        try {
-                            const test = await P1();
-                            if (test != null && test != '' && test != undefined) {
-                                const resp = await Bypass_Module.Cook_And_Work(ctx, defaultFuncs)
-                                if (resp == true) return logger.Success("Bypassing 956 successfully!", function() { return process.exit(1); })
-                                else return logger.Error("Bypass 956 failed ! DO YOUR SELF :>", function() { process.exit(0) });
-                            }
-                        }
-                        catch (e) {
-                            logger.Error("Bypass 956 failed ! DO YOUR SELF :>", function() { process.exit(0) })
-                        }
+                        break;
+                    }
+                    default: {
+                        log.warn("setOptions", "Unrecognized option given to setOptions: " + key);
+                        break;
                     }
                 }
-            }
-            break;
-            default: {
-                require('npmlog').Error("Invalid Message!");
-            };
-        }
-    }
-});
-
-try {
-    let Boolean_Fca = ["AntiSendAppState","AutoUpdate","Uptime","BroadCast","EncryptFeature","AutoLogin","ResetDataLogin","Login2Fa", "DevMode","AutoInstallNode"];
-    let String_Fca = ["MainName","PreKey","Language","AuthString","Config"]
-    let Number_Fca = ["AutoRestartMinutes","RestartMQTT_Minutes"];
-    let Object_Fca = ["HTML","Stable_Version","AntiGetInfo","Websocket_Extension", "CheckPointBypass", "AntiStuckAndMemoryLeak"];
-    let All_Variable = Boolean_Fca.concat(String_Fca,Number_Fca,Object_Fca);
-
-
-    if (!global.Fca.Require.fs.existsSync(process.cwd() + '/SagorFca.json')) {
-        global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(global.Fca.Data.ObjSagor, null, "\t"));
-        process.exit(1);
-    }
-
-try {
-    var Data_Setting = require(process.cwd() + "/SagorFca.json");
-}
-catch (e) {
-    global.Fca.Require.logger.Error('Detect Your SagorFca Settings Invalid!, Carry out default restoration');
-    global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(global.Fca.Data.ObjSagor, null, "\t"));     
-    process.exit(1)
-}
-    if (global.Fca.Require.fs.existsSync(process.cwd() + '/SagorFca.json')) {
-        
-        for (let i of All_Variable) {
-            if (Data_Setting[i] == undefined) {
-                Data_Setting[i] = global.Fca.Data.ObjSagor[i];
-                global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(Data_Setting, null, "\t"));
-            }
-            else continue; 
-        } //Check Variable
-
-        for (let i in Data_Setting) {
-            if (Boolean_Fca.includes(i)) {
-                if (global.Fca.Require.utils.getType(Data_Setting[i]) != "Boolean") logger.Error(i + " Is Not A Boolean, Need To Be true Or false !", function() { process.exit(0) });
-                else continue;
-            }
-            else if (String_Fca.includes(i)) {
-                if (global.Fca.Require.utils.getType(Data_Setting[i]) != "String") logger.Error(i + " Is Not A String, Need To Be String!", function() { process.exit(0) });
-                else continue;
-            }
-            else if (Number_Fca.includes(i)) {
-                if (global.Fca.Require.utils.getType(Data_Setting[i]) != "Number") logger.Error(i + " Is Not A Number, Need To Be Number !", function() { process.exit(0) });
-                else continue;
-            }
-            else if (Object_Fca.includes(i)) {
-                if (global.Fca.Require.utils.getType(Data_Setting[i]) != "Object") {
-                    Data_Setting[i] = global.Fca.Data.ObjSagor[i];
-                    global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(Data_Setting, null, "\t"));
-                }
-                else continue;
+                break;
             }
         }
-
-        for (let i of Object_Fca) {
-            const All_Paths = utils.getPaths(global.Fca.Data.ObjSagor[i]);
-            const Mission = { Main_Path: i, Data_Path: All_Paths }
-            for (let i of Mission.Data_Path) {
-                if (Data_Setting[Mission.Main_Path] == undefined) {
-                    Data_Setting[Mission.Main_Path] = global.Fca.Data.ObjSagor[Mission.Main_Path];
-                    global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(Data_Setting, null, "\t"));      
-                }
-                const User_Data = (utils.getData_Path(Data_Setting[Mission.Main_Path], i, 0))
-                const User_Data_Type = utils.getType(User_Data);
-                if (User_Data_Type == "Number") {
-                    const Mission_Path = User_Data == 0 ? i : i.slice(0, User_Data); 
-                    const Mission_Obj = utils.getData_Path(global.Fca.Data.ObjSagor[Mission.Main_Path], Mission_Path, 0);
-                    Data_Setting[Mission.Main_Path] = utils.setData_Path(Data_Setting[Mission.Main_Path], Mission_Path, Mission_Obj)
-                    global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(Data_Setting, null, "\t"));      
-                }
-            }
-        }
-
-        if (!global.Fca.Require.languageFile.some((/** @type {{ Language: string; }} */i) => i.Language == Data_Setting.Language)) { 
-            global.Fca.Require.logger.Warning("Not Support Language: " + Data_Setting.Language + " Only 'en' and 'vi'");
-            process.exit(0); 
-        }
-        global.Fca.Require.Language = global.Fca.Require.languageFile.find((/** @type {{ Language: string; }} */i) => i.Language == Data_Setting.Language).Folder;
-    } else process.exit(1);
-    global.Fca.Require.Sagor = Data_Setting;
-}
-catch (e) {
-    console.log(e);
-    global.Fca.Require.logger.Error();
-}
-
-/*
-if (global.Fca.Require.FastConfig.Websocket_Extension.Status) {
-    console.history = new Array();
-    var Convert = require('ansi-to-html');
-    var convert = new Convert();
-    console.__log = console.log;
-    console.log = function (data) {
-        const log = convert.toHtml(data)
-        console.history.push(log)
-        console.__log.apply(console,arguments)
-        if (console.history.length > 80) {
-            console.history.shift();
-        }
-    }
-}
-**/
-
-module.exports = function(loginData, options, callback) {
-    //const Language = global.Fca.Require.languageFile.find((/** @type {{ Language: string; }} */i) => i.Language == global.Fca.Require.FastConfig.Language).Folder.Index;
-    var login;
-    try {
-        login = require('./Main');
-    }
-    catch (e) {
-        console.log(e)
-    }
-    //const fs = require('fs-extra');
-    //const got = require('got');
-    //const log = require('npmlog');
-    //const { execSync } = require('child_process');
- require('./Extra/Database');
-    
-    /*
-    return got.get('https://github.com/KanzuXHorizon/Global_Horizon/raw/main/InstantAction.json').then(async function(res) {
-        if (global.Fca.Require.FastConfig.AutoInstallNode) {
-            switch (fs.existsSync(process.cwd() + "/replit.nix") && process.env["REPL_ID"] != undefined) {
-                case true: {
-                    await require('./Extra/Src/Change_Environment.js')();
-                    break;
-                }
-                case false: {
-                    const NodeVersion = execSync('node -v').toString().replace(/(\r\n|\n|\r)/gm, "");
-                    if (!NodeVersion.includes("v14") && !NodeVersion.includes("v16") && !Database(true).has('SkipReplitNix')) {
-                        log.warn("[ FCA-UPDATE ] •",global.Fca.getText(Language.NodeVersionNotSupported, NodeVersion));
-                        await new Promise(resolve => setTimeout(resolve, 3000));
-                        try {
-                            switch (process.platform) {
-                                case "win32": {
-                                    try {
-                                    //check if user using nvm 
-                                        if (fs.existsSync(process.env.APPDATA + "/nvm/nvm.exe")) {
-                                            log.warn("[ FCA-UPDATE ] •", Language.UsingNVM);
-                                            process.exit(0);
-                                        }
-                                        //download NodeJS v14 for Windows and slient install
-                                        await got('https://nodejs.org/dist/v14.17.0/node-v14.17.0-x64.msi').pipe(fs.createWriteStream(process.cwd() + "/node-v14.17.0-x64.msi"));
-                                        log.info("[ FCA-UPDATE ] •", Language.DownloadingNode);
-                                        await new Promise(resolve => setTimeout(resolve, 3000));
-                                        execSync('msiexec /i node-v14.17.0-x64.msi /qn');
-                                        log.info("[ FCA-UPDATE ] •", Language.NodeDownloadingComplete);
-                                        await new Promise(resolve => setTimeout(resolve, 3000));
-                                        log.info("[ FCA-UPDATE ] •", Language.RestartRequire);
-                                        Database(true).set("NeedRebuild", true);
-                                        process.exit(0);
-                                    }
-                                    catch (e) {
-                                        log.error("[ FCA-UPDATE ] •",Language.ErrNodeDownload);
-                                        process.exit(0);
-                                    }
-                                }
-                                case "linux": {
-
-                                    try {
-                                        if (process.env["REPL_ID"] != undefined) {
-                                            log.warn("[ FCA-UPDATE ] •", "Look like you are using Replit, and didn't have replit.nix file in your project, i don't know how to help you, hmm i will help you pass this step, but you need to install NodeJS v14 by yourself, and restart your repl");
-                                            Database(true).set('SkipReplitNix', true);
-                                            await new Promise(resolve => setTimeout(resolve, 3000));
-                                            process.exit(1);
-                                        }
-                                            //check if user using nvm 
-                                            if (fs.existsSync(process.env.HOME + "/.nvm/nvm.sh")) {
-                                                log.warn("[ FCA-UPDATE ] •", Language.UsingNVM);
-                                                process.exit(0);
-                                            }
-                                            //download NodeJS v14 for Linux and slient install
-                                            await got('https://nodejs.org/dist/v14.17.0/node-v14.17.0-linux-x64.tar.xz').pipe(fs.createWriteStream(process.cwd() + "/node-v14.17.0-linux-x64.tar.xz"));
-                                            log.info("[ FCA-UPDATE ] •", Language.DownloadingNode);
-                                            await new Promise(resolve => setTimeout(resolve, 3000));
-                                            execSync('tar -xf node-v14.17.0-linux-x64.tar.xz');
-                                            execSync('cd node-v14.17.0-linux-x64');
-                                            execSync('sudo cp -R * /usr/local/');
-                                            log.info("[ FCA-UPDATE ] •", Language.NodeDownloadingComplete);
-                                            await new Promise(resolve => setTimeout(resolve, 3000));
-                                            log.info("[ FCA-UPDATE ] •",Language.RestartingN);
-                                            Database(true).set("NeedRebuild", true);
-                                            process.exit(1);                                
-                                        }
-                                        catch (e) {
-                                            log.error("[ FCA-UPDATE ] •",Language.ErrNodeDownload);
-                                            process.exit(0);
-                                        }
-                                }
-                                case "darwin": {
-                                    try {
-                                        //check if user using nvm 
-                                        if (fs.existsSync(process.env.HOME + "/.nvm/nvm.sh")) {
-                                            log.warn("[ FCA-UPDATE ] •", Language.UsingNVM);
-                                            process.exit(0);
-                                        }
-                                        //download NodeJS v14 for MacOS and slient install
-                                        await got('https://nodejs.org/dist/v14.17.0/node-v14.17.0-darwin-x64.tar.gz').pipe(fs.createWriteStream(process.cwd() + "/node-v14.17.0-darwin-x64.tar.gz"));
-                                        log.info("[ FCA-UPDATE ] •", Language.DownloadingNode);
-                                        await new Promise(resolve => setTimeout(resolve, 3000));
-                                        execSync('tar -xf node-v14.17.0-darwin-x64.tar.gz');
-                                        execSync('cd node-v14.17.0-darwin-x64');
-                                        execSync('sudo cp -R * /usr/local/');
-                                        log.info("[ FCA-UPDATE ] •", Language.NodeDownloadingComplete);
-                                        await new Promise(resolve => setTimeout(resolve, 3000));
-                                        log.info("[ FCA-UPDATE ] •",Language.RestartingN);
-                                        Database(true).set("NeedRebuild", true);
-                                        process.exit(1);
-                                    }
-                                    catch (e) {
-                                        log.error("[ FCA-UPDATE ] •",Language.ErrNodeDownload);
-                                        process.exit(0);
-                                    }
-                                }
-                            }
-                        }
-                        catch (e) {
-                            console.log(e);
-                            log.error("[ FCA-UPDATE ] •","NodeJS v14 Installation Failed, Please Try Again and Contact fb.com/Lazic.Kanzu!");
-                            process.exit(0);
-                        }
-                    }
-                }
-            }
-        }
-        if ((Database(true).get("NeedRebuild")) == true) {
-            Database(true).set("NeedRebuild", false);
-            log.info("[ FCA-UPDATE ] •",Language.Rebuilding);
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            try {
-                execSync('npm rebuild', {stdio: 'inherit'});
-            }
-            catch (e) {
-                console.log(e);
-                log.error("[ FCA-UPDATE ] •",Language.ErrRebuilding);
-            }
-            log.info("[ FCA-UPDATE ] •",Language.SuccessRebuilding);
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            log.info("[ FCA-UPDATE ] •",Language.RestartingN);
-            process.exit(1);
-        }
-
-        let Data = JSON.parse(res.body);
-            if (global.Fca.Require.FastConfig.Stable_Version.Accept == true) {
-                if (Data.Stable_Version.Valid_Version.includes(global.Fca.Require.FastConfig.Stable_Version.Version)) {
-                    let TimeStamp = Database(true).get('Check_Update');
-                        if (TimeStamp == null || TimeStamp == undefined || Date.now() - TimeStamp > 300000) {
-                            var Check_Update = require('./Extra/Src/Check_Update.js');
-                        await Check_Update(global.Fca.Require.FastConfig.Stable_Version.Version);
-                    }
-                }
-                else {
-                    log.warn("[ FCA-UPDATE ] •", "Error Stable Version, Please Check Your Stable Version in FastConfig.json, Automatically turn off Stable Version!");
-                        global.Fca.Require.FastConfig.Stable_Version.Accept = false;
-                        global.Fca.Require.fs.writeFileSync(process.cwd() + "/SagorFca.json", JSON.stringify(global.Fca.Require.FastConfig, null, "\t"));
-                    process.exit(1);
-                }
-            }
-            else {
-                if (Data.HasProblem == true || Data.ForceUpdate == true) {
-                    let TimeStamp = Database(true).get('Instant_Update');
-                        if (TimeStamp == null || TimeStamp == undefined || Date.now() - TimeStamp > 500) {
-                            var Instant_Update = require('./Extra/Src/Instant_Update.js');
-                        await Instant_Update()
-                    }
-                }
-                else {
-                    let TimeStamp = Database(true).get('Check_Update');
-                        if (TimeStamp == null || TimeStamp == undefined || Date.now() - TimeStamp > 300000) {
-                            var Check_Update = require('./Extra/Src/Check_Update.js');
-                        await Check_Update()
-                    } 
-                }
-            }
-        return login(loginData, options, callback);
-    }).catch(function(err) {
-        console.log(err)
-            log.error("[ FCA-UPDATE ] •",Language.UnableToConnect);
-            log.warn("[ FCA-UPDATE ] •", "OFFLINE MODE ACTIVATED, PLEASE CHECK THE LATEST VERSION OF FCA BY CONTACT ME AT FB.COM/LAZIC.KANZU");
-        return login(loginData, options, callback);
     });
-    **/
-   //temp disabled
+}
+
+function buildAPI(globalOptions, html, jar) {
+    let fb_dtsg = null;
+    let irisSeqID = null;
+    function extractFromHTML() {
+        try {
+            const $ = cheerio.load(html);
+            $('script').each((i, script) => {
+                if (!fb_dtsg) {
+                    const scriptText = $(script).html() || '';
+                    const patterns = [
+                        /\["DTSGInitialData",\[\],{"token":"([^"]+)"}]/,
+                        /\["DTSGInitData",\[\],{"token":"([^"]+)"/,
+                        /"token":"([^"]+)"/,
+                        /{\\"token\\":\\"([^\\]+)\\"/,
+                        /,\{"token":"([^"]+)"\},\d+\]/,
+                        /"async_get_token":"([^"]+)"/,
+                        /"dtsg":\{"token":"([^"]+)"/,
+                        /DTSGInitialData[^>]+>([^<]+)/
+                    ];
+                    for (const pattern of patterns) {
+                        const match = scriptText.match(pattern);
+                        if (match && match[1]) {
+                            try {
+                                const possibleJson = match[1].replace(/\\"/g, '"');
+                                const parsed = JSON.parse(possibleJson);
+                                fb_dtsg = parsed.token || parsed;
+                            } catch {
+                                fb_dtsg = match[1];
+                            }
+                            if (fb_dtsg) break;
+                        }
+                    }
+                }
+            });
+            if (!fb_dtsg) {
+                const dtsgInput = $('input[name="fb_dtsg"]').val();
+                if (dtsgInput) fb_dtsg = dtsgInput;
+            }
+            const seqMatches = html.match(/irisSeqID":"([^"]+)"/);
+            if (seqMatches && seqMatches[1]) {
+                irisSeqID = seqMatches[1];
+            }
+            try {
+                const jsonMatches = html.match(/\{"dtsg":({[^}]+})/);
+                if (jsonMatches && jsonMatches[1]) {
+                    const dtsgData = JSON.parse(jsonMatches[1]);
+                    if (dtsgData.token) fb_dtsg = dtsgData.token;
+                }
+            } catch { }
+            if (fb_dtsg) {
+                console.log("Found fb_dtsg!");
+            }
+        } catch (e) {
+            console.log("Error finding fb_dtsg:", e);
+        }
+    }
+    extractFromHTML();
+    var userID;
+    var cookies = jar.getCookies("https://www.facebook.com");
+    var userCookie = cookies.find(cookie => cookie.cookieString().startsWith("c_user="));
+    var tiktikCookie = cookies.find(cookie => cookie.cookieString().startsWith("i_user="));
+    if (!userCookie && !tiktikCookie) {
+        return log.error("Error! Your cookiestate is not valid!");
+    }
+    if (html.includes("/checkpoint/block/?next")) {
+        return log.error('error', "Appstate is dead rechange it!", 'error');
+    }
+    userID = (tiktikCookie || userCookie).cookieString().split("=")[1];
+    //logger.log(`${cra(`[ CONNECT ]`)} Logged in as ${userID}`, "DATABASE");
+    try { clearInterval(checkVerified); } catch (_) { }
+    const clientID = (Math.random() * 2147483648 | 0).toString(16);
+    let mqttEndpoint = `wss://edge-chat.facebook.com/chat?region=pnb&sid=${userID}`;
+    let region = "PNB";
+
     try {
-        login(loginData, options, callback);
+        const endpointMatch = html.match(/"endpoint":"([^"]+)"/);
+        if (endpointMatch.input.includes("601051028565049")) {
+          console.log(`login error.`);
+          ditconmemay = true;
+        }
+        if (endpointMatch) {
+            mqttEndpoint = endpointMatch[1].replace(/\\\//g, '/');
+            const url = new URL(mqttEndpoint);
+            region = url.searchParams.get('region')?.toUpperCase() || "PNB";
+        }
+    } catch (e) {
+        console.log('Using default MQTT endpoint');
     }
-    catch (e) {
-        console.log(e)
+    log.info('Logging in...');
+    var ctx = {
+        userID: userID,
+        jar: jar,
+        clientID: clientID,
+        globalOptions: globalOptions,
+        loggedIn: true,
+        access_token: 'NONE',
+        clientMutationId: 0,
+        mqttClient: undefined,
+        lastSeqId: irisSeqID,
+        syncToken: undefined,
+        mqttEndpoint: mqttEndpoint,
+        region: region,
+        firstListen: true,
+        fb_dtsg: fb_dtsg,
+        req_ID: 0,
+        callback_Task: {},
+        wsReqNumber: 0,
+        wsTaskNumber: 0,
+        reqCallbacks: {}
+    };
+    var api = {
+        setOptions: setOptions.bind(null, globalOptions),
+        getAppState: () => utils.getAppState(jar),
+        postFormData: (url, body) => utils.makeDefaults(html, userID, ctx).postFormData(url, ctx.jar, body)
+    };
+    var defaultFuncs = utils.makeDefaults(html, userID, ctx);
+    api.postFormData = function (url, body) {
+        return defaultFuncs.postFormData(url, ctx.jar, body);
+    };
+    api.getFreshDtsg = async function () {
+        try {
+            const res = await defaultFuncs.get('https://www.facebook.com/', jar, null, globalOptions);
+            const $ = cheerio.load(res.body);
+            let newDtsg;
+            const patterns = [
+                /\["DTSGInitialData",\[\],{"token":"([^"]+)"}]/,
+                /\["DTSGInitData",\[\],{"token":"([^"]+)"/,
+                /"token":"([^"]+)"/,
+                /name="fb_dtsg" value="([^"]+)"/
+            ];
+
+            $('script').each((i, script) => {
+                if (!newDtsg) {
+                    const scriptText = $(script).html() || '';
+                    for (const pattern of patterns) {
+                        const match = scriptText.match(pattern);
+                        if (match && match[1]) {
+                            newDtsg = match[1];
+                            break;
+                        }
+                    }
+                }
+            });
+
+            if (!newDtsg) {
+                newDtsg = $('input[name="fb_dtsg"]').val();
+            }
+
+            return newDtsg;
+        } catch (e) {
+            console.log("Error getting fresh dtsg:", e);
+            return null;
+        }
+    };
+    //if (noMqttData) api.htmlData = noMqttData;
+    require('fs').readdirSync(__dirname + '/src/').filter(v => v.endsWith('.js')).forEach(v => { api[v.replace('.js', '')] = require(`./src/${v}`)(utils.makeDefaults(html, userID, ctx), api, ctx); });
+    api.listen = api.listenMqtt;
+    return {
+        ctx,
+        defaultFuncs,
+        api
+    };
+}
+
+function makeLogin(jar, email, password, loginOptions, callback, prCallback) {
+    return async function (res) {
+        try {
+            const html = res.body;
+            const $ = cheerio.load(html);
+            let arr = [];
+            $("#login_form input").each((i, v) => arr.push({ val: $(v).val(), name: $(v).attr("name") }));
+            arr = arr.filter(v => v.val && v.val.length);
+            let form = utils.arrToForm(arr);
+            form.lsd = utils.getFrom(html, "[\"LSD\",[],{\"token\":\"", "\"}");
+            form.lgndim = Buffer.from(JSON.stringify({ w: 1440, h: 900, aw: 1440, ah: 834, c: 24 })).toString('base64');
+            form.email = email;
+            form.pass = password;
+            form.default_persistent = '0';
+            form.lgnrnd = utils.getFrom(html, "name=\"lgnrnd\" value=\"", "\"");
+            form.locale = 'en_US';
+            form.timezone = '240';
+            form.lgnjs = Math.floor(Date.now() / 1000);
+            const willBeCookies = html.split("\"_js_");
+            willBeCookies.slice(1).forEach(val => {
+                const cookieData = JSON.parse("[\"" + utils.getFrom(val, "", "]") + "]");
+                jar.setCookie(utils.formatCookie(cookieData, "facebook"), "https://www.facebook.com");
+            });
+            log.info("Logging in...");
+            const loginRes = await utils.post(
+                "https://www.facebook.com/login/device-based/regular/login/?login_attempt=1&lwv=110",
+                jar,
+                form,
+                loginOptions
+            );
+            await utils.saveCookies(jar)(loginRes);
+            const headers = loginRes.headers;
+            if (!headers.location) throw new Error("Wrong username/password.");
+            if (headers.location.includes('https://www.facebook.com/checkpoint/')) {
+                log.info("login", "You have login approvals turned on.");
+                const checkpointRes = await utils.get(headers.location, jar, null, loginOptions);
+                await utils.saveCookies(jar)(checkpointRes);
+                const checkpointHtml = checkpointRes.body;
+                const $ = cheerio.load(checkpointHtml);
+                let checkpointForm = [];
+                $("form input").each((i, v) => checkpointForm.push({ val: $(v).val(), name: $(v).attr("name") }));
+                checkpointForm = checkpointForm.filter(v => v.val && v.val.length);
+                const form = utils.arrToForm(checkpointForm);
+                if (checkpointHtml.includes("checkpoint/?next")) {
+                    return new Promise((resolve, reject) => {
+                        const submit2FA = async (code) => {
+                            try {
+                                form.approvals_code = code;
+                                form['submit[Continue]'] = $("#checkpointSubmitButton").html();
+                                const approvalRes = await utils.post(
+                                    "https://www.facebook.com/checkpoint/?next=https%3A%2F%2Fwww.facebook.com%2Fhome.php",
+                                    jar,
+                                    form,
+                                    loginOptions
+                                );
+                                await utils.saveCookies(jar)(approvalRes);
+                                const approvalError = $("#approvals_code").parent().attr("data-xui-error");
+                                if (approvalError) throw new Error("Invalid 2FA code.");
+                                form.name_action_selected = 'dont_save';
+                                const finalRes = await utils.post(
+                                    "https://www.facebook.com/checkpoint/?next=https%3A%2F%2Fwww.facebook.com%2Fhome.php",
+                                    jar,
+                                    form,
+                                    loginOptions
+                                );
+                                await utils.saveCookies(jar)(finalRes);
+                                const appState = utils.getAppState(jar);
+                                resolve(await loginHelper(appState, email, password, loginOptions, callback));
+                            } catch (error) {
+                                reject(error);
+                            }
+                        };
+                        throw {
+                            error: 'login-approval',
+                            continue: submit2FA
+                        };
+                    });
+                }
+                if (!loginOptions.forceLogin) throw new Error("Couldn't login. Facebook might have blocked this account.");
+                form['submit[This was me]'] = checkpointHtml.includes("Suspicious Login Attempt") ? "This was me" : "This Is Okay";
+                await utils.post("https://www.facebook.com/checkpoint/?next=https%3A%2F%2Fwww.facebook.com%2Fhome.php", jar, form, loginOptions);
+                form.name_action_selected = 'save_device';
+                const reviewRes = await utils.post("https://www.facebook.com/checkpoint/?next=https%3A%2F%2Fwww.facebook.com%2Fhome.php", jar, form, loginOptions);
+                const appState = utils.getAppState(jar);
+                return await loginHelper(appState, email, password, loginOptions, callback);
+            }
+            await utils.get('https://www.facebook.com/', jar, null, loginOptions);
+            return await utils.saveCookies(jar);
+        } catch (error) {
+            callback(error);
+        }
+    };
+}
+
+
+function loginHelper(appState, email, password, globalOptions, callback, prCallback) {
+    let mainPromise = null;
+    const jar = utils.getJar();
+    if (appState) {
+        try {
+            appState = JSON.parse(appState);
+        } catch (e) {
+            try {
+                appState = appState;
+            } catch (e) {
+                return callback(new Error("Failed to parse appState"));
+            }
+        }
+
+        try {
+            appState.forEach(c => {
+                const str = `${c.key}=${c.value}; expires=${c.expires}; domain=${c.domain}; path=${c.path};`;
+                jar.setCookie(str, "http://" + c.domain);
+            });
+
+            mainPromise = utils.get('https://www.facebook.com/', jar, null, globalOptions, { noRef: true })
+                .then(utils.saveCookies(jar));
+        } catch (e) {
+            process.exit(0);
+        }
+    } else {
+        mainPromise = utils
+            .get("https://www.facebook.com/", null, null, globalOptions, { noRef: true })
+            .then(utils.saveCookies(jar))
+            .then(makeLogin(jar, email, password, globalOptions, callback, prCallback))
+            .then(() => utils.get('https://www.facebook.com/', jar, null, globalOptions).then(utils.saveCookies(jar)));
     }
-};
+
+    function handleRedirect(res) {
+        const reg = /<meta http-equiv="refresh" content="0;url=([^"]+)[^>]+>/;
+        const redirect = reg.exec(res.body);
+        if (redirect && redirect[1]) {
+            return utils.get(redirect[1], jar, null, globalOptions).then(utils.saveCookies(jar));
+        }
+        return res;
+    }
+
+    let ctx, api;
+    mainPromise = mainPromise
+        .then(handleRedirect)
+        .then(res => {
+            const mobileAgentRegex = /MPageLoadClientMetrics/gs;
+            if (!mobileAgentRegex.test(res.body)) {
+                globalOptions.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
+                return utils.get('https://www.facebook.com/', jar, null, globalOptions, { noRef: true }).then(utils.saveCookies(jar));
+            }
+            return res;
+        })
+        .then(handleRedirect)
+        .then(res => {
+            const html = res.body;
+            const Obj = buildAPI(globalOptions, html, jar);
+            ctx = Obj.ctx;
+            api = Obj.api;
+            return res;
+        });
+
+    if (globalOptions.pageID) {
+        mainPromise = mainPromise
+            .then(() => utils.get(`https://www.facebook.com/${globalOptions.pageID}/messages/?section=messages&subsection=inbox`, jar, null, globalOptions))
+            .then(resData => {
+                let url = utils.getFrom(resData.body, 'window.location.replace("https:\\/\\/www.facebook.com\\', '");').split('\\').join('');
+                url = url.substring(0, url.length - 1);
+                return utils.get('https://www.facebook.com' + url, jar, null, globalOptions);
+            });
+    }
+
+    mainPromise
+        .then(async () => {
+            log.info('Login successful');
+            callback(null, api);
+        })
+        .catch(e => {
+            callback(e);
+        });
+}
+
+
+function login(loginData, options, callback) {
+    if (utils.getType(options) === 'Function' || utils.getType(options) === 'AsyncFunction') {
+        callback = options;
+        options = {};
+    }
+
+    var globalOptions = {
+        selfListen: false,
+        listenEvents: true,
+        listenTyping: false,
+        updatePresence: false,
+        forceLogin: false,
+        autoMarkDelivery: false,
+        autoMarkRead: false,
+        autoReconnect: true,
+        logRecordSize: 100,
+        online: false,
+        emitReady: false,
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    };
+
+    var prCallback = null;
+    if (utils.getType(callback) !== "Function" && utils.getType(callback) !== "AsyncFunction") {
+        var rejectFunc = null;
+        var resolveFunc = null;
+        var returnPromise = new Promise(function (resolve, reject) {
+            resolveFunc = resolve;
+            rejectFunc = reject;
+        });
+        prCallback = function (error, api) {
+            if (error) return rejectFunc(error);
+            return resolveFunc(api);
+        };
+        callback = prCallback;
+    }
+
+    if (loginData.email && loginData.password) {
+        setOptions(globalOptions, {
+            logLevel: "silent",
+            forceLogin: true,
+            userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        });
+        loginHelper(loginData.appState, loginData.email, loginData.password, globalOptions, callback, prCallback);
+    } else if (loginData.appState) {
+        setOptions(globalOptions, options);
+        return loginHelper(loginData.appState, loginData.email, loginData.password, globalOptions, callback, prCallback);
+    }
+    return returnPromise;
+}
+
+
+module.exports = login;
