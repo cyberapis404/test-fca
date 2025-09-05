@@ -1,7 +1,7 @@
 {
     "name": "sagor-vex-fca",
     "version": "0.0.7",
-    "description": "A Facebook chat api for messenger bots.",
+    "description": "A Facebook chat api for messenger bot.",
     "keywords": [
         "facebook",
         "chat",
