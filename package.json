@@ -1,7 +1,6 @@
 {
     "name": "cyber-fca",
-    "version",
-    "version": "0.0.7",
+    "version": "4.0.7",
     "description": "A Facebook chat api for messenger bot.",
     "keywords": [
         "facebook",
