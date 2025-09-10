@@ -1,6 +1,6 @@
 {
     "name": "cyber-fca",
-    "version": "4.0.7",
+    "version": "0.0.7",
     "description": "A Facebook chat api for messenger bot.",
     "keywords": [
         "facebook",
@@ -35,6 +35,17 @@
         "node-cron": "^3.0.3",
         "npmlog": "^7.0.1",
         "request": "^2.88.2",
+        "websocket-stream": "^5.5.0"
+    },
+    "devDependencies": {
+        "eslint": "^7.5.0",
+        "mocha": "^7.0.1",
+        "prettier": "^1.11.1"
+    },
+    "engines": {
+        "node": ">=10.x"
+    }
+}        "request": "^2.88.2",
         "websocket-stream": "^5.5.0"
     },
     "devDependencies": {
